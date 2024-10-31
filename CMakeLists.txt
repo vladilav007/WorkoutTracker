@@ -18,18 +18,10 @@ find_package(Qt6 REQUIRED COMPONENTS
 set(SOURCES
     src/main.cpp
     src/views/mainwindow.cpp
-    src/views/monthview.cpp
-    src/views/weekview.cpp
-    src/models/workoutmodel.cpp
-    src/controllers/workoutcontroller.cpp
 )
 
 set(HEADERS
     src/views/mainwindow.h
-    src/views/monthview.h
-    src/views/weekview.h
-    src/models/workoutmodel.h
-    src/controllers/workoutcontroller.h
 )
 
 add_executable(WorkoutTracker
