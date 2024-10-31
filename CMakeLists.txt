@@ -18,10 +18,12 @@ find_package(Qt6 REQUIRED COMPONENTS
 set(SOURCES
     src/main.cpp
     src/views/mainwindow.cpp
+    src/views/customcalendarwidget.cpp
 )
 
 set(HEADERS
     src/views/mainwindow.h
+    src/views/customcalendarwidget.h
 )
 
 add_executable(WorkoutTracker
