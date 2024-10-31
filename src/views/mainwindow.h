@@ -2,10 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QCalendarWidget>
 #include <QVBoxLayout>
 #include <QToolBar>
 #include <QAction>
+#include "customcalendarwidget.h"  // Добавляем включение заголовочного файла
 
 class MainWindow : public QMainWindow
 {
@@ -29,7 +29,7 @@ private:
     // UI components
     QWidget *centralWidget;
     QVBoxLayout *mainLayout;
-    QCalendarWidget *calendar;
+    CustomCalendarWidget *calendar;  // Меняем тип с QCalendarWidget на CustomCalendarWidget
     QToolBar *toolBar;
 
     // Actions
