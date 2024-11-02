@@ -11,7 +11,6 @@ class CustomCalendarWidget : public QCalendarWidget
     Q_OBJECT
 
 public:
-    // Workout status enumeration for color coding
     enum WorkoutStatus {
         NoWorkout,    // White/default - future scheduled workout
         Completed,    // Green - workout completed
@@ -26,14 +25,13 @@ public:
     WorkoutStatus getDayStatus(const QDate &date) const;
 
 protected:
-    // Override paintCell to implement custom cell rendering
     void paintCell(QPainter *painter, const QRect &rect, QDate date) const override;
 
 private:
     // Map to store status for each date
     QMap<QDate, WorkoutStatus> dayStatusMap;
     
-    // Helper method to get color based on status
+    // Helper method
     QColor getStatusColor(WorkoutStatus status) const;
 };
 

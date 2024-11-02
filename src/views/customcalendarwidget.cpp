@@ -5,12 +5,10 @@
 CustomCalendarWidget::CustomCalendarWidget(QWidget *parent)
     : QCalendarWidget(parent)
 {
-    // Setup calendar appearance
     setGridVisible(true);
     setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
     setNavigationBarVisible(true);
     
-    // Set dark theme for calendar
     setStyleSheet(
         "QCalendarWidget QWidget { background-color: #2b2b2b; }"
         "QCalendarWidget QAbstractItemView:enabled { color: white; }"
@@ -49,7 +47,6 @@ QColor CustomCalendarWidget::getStatusColor(WorkoutStatus status) const
 
 void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, QDate date) const
 {
-    // Save current painter settings
     painter->save();
 
     // Fill cell background based on status
@@ -90,6 +87,5 @@ void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, QDate
         painter->fillRect(indicatorRect, textColor);
     }
     
-    // Restore painter settings
     painter->restore();
 }

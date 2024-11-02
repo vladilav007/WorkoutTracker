@@ -5,7 +5,8 @@
 #include <QVBoxLayout>
 #include <QToolBar>
 #include <QAction>
-#include "customcalendarwidget.h"  // Добавляем включение заголовочного файла
+#include <QLabel>
+#include "customcalendarwidget.h"
 
 class MainWindow : public QMainWindow
 {
@@ -20,6 +21,7 @@ private slots:
     void editWorkout();
     void switchToMonthView();
     void switchToWeekView();
+    void handleDayClicked(const QDate &date);
 
 private:
     void setupUI();
@@ -29,8 +31,9 @@ private:
     // UI components
     QWidget *centralWidget;
     QVBoxLayout *mainLayout;
-    CustomCalendarWidget *calendar;  // Меняем тип с QCalendarWidget на CustomCalendarWidget
+    CustomCalendarWidget *calendar;
     QToolBar *toolBar;
+    QLabel *statusLabel;
 
     // Actions
     QAction *newWorkoutAction;

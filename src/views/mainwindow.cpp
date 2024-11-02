@@ -20,7 +20,6 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    // No need for manual cleanup as Qt's parent-child system handles deletion
 }
 
 void MainWindow::setupUI()
@@ -30,16 +29,25 @@ void MainWindow::setupUI()
     
     mainLayout = new QVBoxLayout(centralWidget);
     
+    // Create status label
+    statusLabel = new QLabel(this);
+    statusLabel->setStyleSheet("QLabel { color: white; padding: 5px; }");
+    mainLayout->addWidget(statusLabel);
+    
     calendar = new CustomCalendarWidget(this);
     mainLayout->addWidget(calendar);
+    
+    // Connect the click signal
+    connect(calendar, &QCalendarWidget::clicked,
+            this, &MainWindow::handleDayClicked);
     
     // Add test data for demonstration
     QDate today = QDate::currentDate();
     
     // Past workouts
-    calendar->setDayStatus(today.addDays(-1), CustomCalendarWidget::Completed);  // Yesterday - completed
-    calendar->setDayStatus(today.addDays(-2), CustomCalendarWidget::Missed);     // Day before - missed
-    calendar->setDayStatus(today.addDays(-3), CustomCalendarWidget::RestDay);    // Three days ago - rest
+    calendar->setDayStatus(today.addDays(-1), CustomCalendarWidget::Completed);
+    calendar->setDayStatus(today.addDays(-2), CustomCalendarWidget::Missed);
+    calendar->setDayStatus(today.addDays(-3), CustomCalendarWidget::RestDay);
     
     // Set Sundays as rest days
     QDate firstDayOfMonth = today.addDays(-today.day() + 1);
@@ -77,8 +85,6 @@ void MainWindow::createActions()
 void MainWindow::createToolBar()
 {
     toolBar = addToolBar(tr("Main"));
-    
-    // Add actions to toolbar
     toolBar->addAction(newWorkoutAction);
     toolBar->addAction(editWorkoutAction);
     toolBar->addSeparator();
@@ -89,23 +95,47 @@ void MainWindow::createToolBar()
 void MainWindow::createNewWorkout()
 {
     // TODO: Implement workout creation
-    // Will be implemented when we create the WorkoutDialog class
 }
 
 void MainWindow::editWorkout()
 {
     // TODO: Implement workout editing
-    // Will be implemented when we create the WorkoutDialog class
 }
 
 void MainWindow::switchToMonthView()
 {
     // TODO: Implement switch to month view
-    // Will be implemented when we create the MonthView class
 }
 
 void MainWindow::switchToWeekView()
 {
     // TODO: Implement switch to week view
-    // Will be implemented when we create the WeekView class
+}
+
+void MainWindow::handleDayClicked(const QDate &date)
+{
+    CustomCalendarWidget::WorkoutStatus status = calendar->getDayStatus(date);
+    QString statusStr;
+    
+    switch (status) {
+        case CustomCalendarWidget::Completed:
+            statusStr = "Completed workout";
+            statusLabel->setStyleSheet("QLabel { color: #4CAF50; padding: 5px; }");  // Green
+            break;
+        case CustomCalendarWidget::Missed:
+            statusStr = "Missed workout";
+            statusLabel->setStyleSheet("QLabel { color: #F44336; padding: 5px; }");  // Red
+            break;
+        case CustomCalendarWidget::RestDay:
+            statusStr = "Rest day";
+            statusLabel->setStyleSheet("QLabel { color: #9E9E9E; padding: 5px; }");  // Grey
+            break;
+        default:
+            statusStr = "No workout planned";
+            statusLabel->setStyleSheet("QLabel { color: white; padding: 5px; }");
+    }
+    
+    statusLabel->setText(QString("Selected: %1 - %2")
+                        .arg(date.toString("dd.MM.yyyy"))
+                        .arg(statusStr));
 }

@@ -1,6 +1,16 @@
-# Root CMakeLists.txt
 cmake_minimum_required(VERSION 3.16)
 project(WorkoutTracker VERSION 1.0 LANGUAGES CXX)
+
+# Qt path can be set via command line: cmake .. -DCMAKE_PREFIX_PATH=/path/to/qt
+if(NOT CMAKE_PREFIX_PATH)
+    if(EXISTS $ENV{HOME}/Qt)
+        file(GLOB QT_VERSIONS "$ENV{HOME}/Qt/[0-9]*.[0-9]*.[0-9]*")
+        if(QT_VERSIONS)
+            list(GET QT_VERSIONS -1 LATEST_QT)
+            set(CMAKE_PREFIX_PATH "${LATEST_QT}/gcc_64")
+        endif()
+    endif()
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
