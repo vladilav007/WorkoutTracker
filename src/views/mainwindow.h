@@ -7,6 +7,7 @@
 #include <QAction>
 #include <QLabel>
 #include "customcalendarwidget.h"
+#include "workoutdialog.h" 
 
 class MainWindow : public QMainWindow
 {

@@ -94,7 +94,12 @@ void MainWindow::createToolBar()
 
 void MainWindow::createNewWorkout()
 {
-    // TODO: Implement workout creation
+    WorkoutDialog dialog(calendar->selectedDate(), this);
+    if (dialog.exec() == QDialog::Accepted) {
+        // Just mark that this day has a workout but keep NoWorkout status
+        calendar->setDayStatus(calendar->selectedDate(), CustomCalendarWidget::NoWorkout);
+        handleDayClicked(calendar->selectedDate());
+    }
 }
 
 void MainWindow::editWorkout()
