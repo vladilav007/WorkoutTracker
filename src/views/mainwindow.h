@@ -1,3 +1,4 @@
+// mainwindow.h
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
@@ -7,7 +8,7 @@
 #include <QAction>
 #include <QLabel>
 #include "customcalendarwidget.h"
-#include "workoutdialog.h" 
+#include "workoutdialog.h"
 
 class MainWindow : public QMainWindow
 {
@@ -23,20 +24,20 @@ private slots:
     void switchToMonthView();
     void switchToWeekView();
     void handleDayClicked(const QDate &date);
+    void handleDayDoubleClicked(const QDate &date);  // Оставляем только одно объявление
 
 private:
     void setupUI();
     void createActions();
     void createToolBar();
+    void showWorkoutDialog(const QDate &date, bool readOnly);
 
-    // UI components
     QWidget *centralWidget;
     QVBoxLayout *mainLayout;
     CustomCalendarWidget *calendar;
     QToolBar *toolBar;
     QLabel *statusLabel;
 
-    // Actions
     QAction *newWorkoutAction;
     QAction *editWorkoutAction;
     QAction *monthViewAction;

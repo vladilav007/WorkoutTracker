@@ -30,12 +30,14 @@ set(SOURCES
     src/views/mainwindow.cpp
     src/views/customcalendarwidget.cpp
     src/views/workoutdialog.cpp
+    src/models/workout_data.cpp
 )
 
 set(HEADERS
     src/views/mainwindow.h
     src/views/customcalendarwidget.h
     src/views/workoutdialog.h
+    src/models/workout_data.h
 )
 
 add_executable(WorkoutTracker

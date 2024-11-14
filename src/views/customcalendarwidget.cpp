@@ -1,3 +1,4 @@
+// customcalendarwidget.cpp
 #include "customcalendarwidget.h"
 #include <QPainter>
 #include <QTextCharFormat>
@@ -5,6 +6,7 @@
 #include <QAction>
 #include <QContextMenuEvent>
 #include <QMouseEvent>
+#include <QDebug>
 
 CustomCalendarWidget::CustomCalendarWidget(QWidget *parent)
     : QCalendarWidget(parent)
@@ -69,6 +71,16 @@ void CustomCalendarWidget::setSelectionOpacity(qreal opacity)
     update();
 }
 
+void CustomCalendarWidget::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    QCalendarWidget::mouseDoubleClickEvent(event);
+    QDate clickedDate = selectedDate();
+    if (hasWorkout(clickedDate)) {
+        qDebug() << "Double click detected on workout day:" << clickedDate;
+        emit dayDoubleClicked(clickedDate);
+    }
+}
+
 void CustomCalendarWidget::mousePressEvent(QMouseEvent *event)
 {
     QCalendarWidget::mousePressEvent(event);
@@ -121,11 +133,9 @@ void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, QDate
 {
     painter->save();
 
-    // Get cell background color based on status
     WorkoutStatus status = getDayStatus(date);
     QColor bgColor = getStatusColor(status);
     
-    // Highlight selected day
     if (date == selectedDate()) {
         bgColor = bgColor.lighter(120);
         painter->setPen(QPen(Qt::white, 2));
@@ -133,11 +143,9 @@ void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, QDate
         painter->setPen(Qt::gray);
     }
     
-    // Draw background and frame
     painter->fillRect(rect, bgColor);
     painter->drawRect(rect);
     
-    // Setup text color
     bool isWeekend = date.dayOfWeek() > 5;
     QColor textColor = (status == NoWorkout) 
         ? (isWeekend ? QColor(244, 67, 54) : QColor(255, 255, 255))
@@ -145,13 +153,11 @@ void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, QDate
     
     painter->setPen(textColor);
     
-    // Draw day number
     QFont font = painter->font();
     font.setPointSize(10);
     painter->setFont(font);
     painter->drawText(rect, Qt::AlignCenter, QString::number(date.day()));
     
-    // Draw workout indicator if needed
     if (hasWorkout(date)) {
         int indicatorSize = 4;
         int margin = 2;
@@ -165,4 +171,27 @@ void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, QDate
     }
     
     painter->restore();
+}
+
+void CustomCalendarWidget::setWorkoutData(const QDate &date, 
+                                        const QString &name,
+                                        const QString &description)
+{
+    WorkoutInfo info;
+    info.name = name;
+    info.description = description;
+    workoutData[date] = info;
+    workoutMap[date] = true;
+    updateCell(date);
+}
+
+bool CustomCalendarWidget::getWorkoutData(const QDate &date, QString &name, QString &description) const
+{
+    if (workoutData.contains(date)) {
+        const WorkoutInfo &info = workoutData[date];
+        name = info.name;
+        description = info.description;
+        return true;
+    }
+    return false;
 }

@@ -4,22 +4,12 @@
 #include <QHeaderView>
 
 WorkoutDialog::WorkoutDialog(const QDate &date, QWidget *parent)
-    : QDialog(parent), workoutDate(date)
+    : QDialog(parent)
+    , workoutDate(date)
+    , isReadOnly(false)
 {
-    setWindowTitle(tr("New Workout - %1").arg(date.toString("dd.MM.yyyy")));
+    setWindowTitle(tr("Workout - %1").arg(date.toString("dd.MM.yyyy")));
     setupUI();
-}
-
-WorkoutDialog::WorkoutDialog(const QDate &date, const QString &name, 
-                           const QString &description, QWidget *parent)
-    : QDialog(parent), workoutDate(date)
-{
-    setWindowTitle(tr("Edit Workout - %1").arg(date.toString("dd.MM.yyyy")));
-    setupUI();
-    
-    // Fill existing data
-    nameEdit->setText(name);
-    descriptionEdit->setText(description);
 }
 
 void WorkoutDialog::setupUI()
@@ -45,30 +35,35 @@ void WorkoutDialog::setupUI()
     mainLayout->addWidget(exerciseTable);
     
     // Table control buttons
-    auto buttonLayout = new QHBoxLayout;
+    auto exerciseButtonLayout = new QHBoxLayout;  // Changed name to be more specific
     addExerciseButton = new QPushButton(tr("Add Exercise"), this);
     removeExerciseButton = new QPushButton(tr("Remove Exercise"), this);
-    buttonLayout->addWidget(addExerciseButton);
-    buttonLayout->addWidget(removeExerciseButton);
-    buttonLayout->addStretch();
-    mainLayout->addLayout(buttonLayout);
+    exerciseButtonLayout->addWidget(addExerciseButton);
+    exerciseButtonLayout->addWidget(removeExerciseButton);
+    exerciseButtonLayout->addStretch();
+    mainLayout->addLayout(exerciseButtonLayout);
     
-    // Dialog buttons
-    auto dialogButtons = new QHBoxLayout;
+    // Add edit button and final buttons
+    editButton = new QPushButton(tr("Edit"), this);
     saveButton = new QPushButton(tr("Save"), this);
     cancelButton = new QPushButton(tr("Cancel"), this);
-    dialogButtons->addStretch();
-    dialogButtons->addWidget(saveButton);
-    dialogButtons->addWidget(cancelButton);
-    mainLayout->addLayout(dialogButtons);
+
+    auto dialogButtonLayout = new QHBoxLayout;  // Changed name to be more specific
+    dialogButtonLayout->addWidget(editButton);
+    dialogButtonLayout->addStretch();
+    dialogButtonLayout->addWidget(saveButton);
+    dialogButtonLayout->addWidget(cancelButton);
+    mainLayout->addLayout(dialogButtonLayout);
     
     // Connect signals
     connect(addExerciseButton, &QPushButton::clicked, this, &WorkoutDialog::addExercise);
     connect(removeExerciseButton, &QPushButton::clicked, this, &WorkoutDialog::removeExercise);
     connect(saveButton, &QPushButton::clicked, this, &WorkoutDialog::saveWorkout);
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
+    connect(editButton, &QPushButton::clicked, this, &WorkoutDialog::editWorkout);
     
     setMinimumWidth(500);
+    updateControlsState();
 }
 
 void WorkoutDialog::setupExerciseTable()
@@ -105,15 +100,59 @@ void WorkoutDialog::removeExercise()
 
 void WorkoutDialog::saveWorkout()
 {
-    // Validation
     if (nameEdit->text().isEmpty()) {
         QMessageBox::warning(this, tr("Warning"), 
                            tr("Please enter a workout name."));
         return;
     }
     
-    // TODO: Save workout data
-    // Here we'll add actual saving when we implement the data model
+    // TODO: Save exercise data here
     
     accept();
 }
+
+void WorkoutDialog::setReadOnly(bool readOnly)
+{
+    isReadOnly = readOnly;
+    updateControlsState();
+}
+
+void WorkoutDialog::addExerciseRow(const QString &name, int sets, int reps)
+{
+    int row = exerciseTable->rowCount();
+    exerciseTable->insertRow(row);
+    
+    QTableWidgetItem *nameItem = new QTableWidgetItem(name);
+    QTableWidgetItem *setsItem = new QTableWidgetItem(QString::number(sets));
+    QTableWidgetItem *repsItem = new QTableWidgetItem(QString::number(reps));
+    
+    exerciseTable->setItem(row, 0, nameItem);
+    exerciseTable->setItem(row, 1, setsItem);
+    exerciseTable->setItem(row, 2, repsItem);
+}
+
+void WorkoutDialog::updateControlsState()
+{
+    // Disable editing in read-only mode
+    nameEdit->setReadOnly(isReadOnly);
+    descriptionEdit->setReadOnly(isReadOnly);
+    exerciseTable->setEditTriggers(isReadOnly ? QAbstractItemView::NoEditTriggers 
+                                            : QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
+    
+    // Show/hide buttons appropriately
+    addExerciseButton->setVisible(!isReadOnly);
+    removeExerciseButton->setVisible(!isReadOnly);
+    saveButton->setVisible(!isReadOnly);
+    editButton->setVisible(isReadOnly);
+    
+    // Update cancel button text
+    cancelButton->setText(isReadOnly ? tr("Close") : tr("Cancel"));
+}
+
+void WorkoutDialog::editWorkout()
+{
+    setReadOnly(false);
+    // When switching to edit mode, ensure save button is visible
+    saveButton->setVisible(true);
+}
+

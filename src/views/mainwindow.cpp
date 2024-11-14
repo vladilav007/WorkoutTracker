@@ -6,6 +6,9 @@
 #include <QVBoxLayout>
 #include <Qt>
 #include <QWidget>
+#include <QPainter> 
+#include <QDebug>
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -29,7 +32,6 @@ void MainWindow::setupUI()
     
     mainLayout = new QVBoxLayout(centralWidget);
     
-    // Create status label
     statusLabel = new QLabel(this);
     statusLabel->setStyleSheet("QLabel { color: white; padding: 5px; }");
     mainLayout->addWidget(statusLabel);
@@ -37,37 +39,36 @@ void MainWindow::setupUI()
     calendar = new CustomCalendarWidget(this);
     mainLayout->addWidget(calendar);
     
-    // Connect the click signal
+    // Подключаем сигнал только один раз
+    connect(calendar, &CustomCalendarWidget::dayDoubleClicked, 
+            this, &MainWindow::handleDayDoubleClicked);
+    
     connect(calendar, &QCalendarWidget::clicked,
             this, &MainWindow::handleDayClicked);
-    
-    // Add test data for demonstration
-    QDate today = QDate::currentDate();
-    
-    // Past workouts
-    calendar->setDayStatus(today.addDays(-1), CustomCalendarWidget::Completed);
-    calendar->setDayStatus(today.addDays(-2), CustomCalendarWidget::Missed);
-    calendar->setDayStatus(today.addDays(-3), CustomCalendarWidget::RestDay);
-    
-    // Set Sundays as rest days
-    QDate firstDayOfMonth = today.addDays(-today.day() + 1);
-    for (int i = 0; i < 31; ++i) {
-        QDate currentDate = firstDayOfMonth.addDays(i);
-        if (currentDate.dayOfWeek() == Qt::Sunday) {
-            calendar->setDayStatus(currentDate, CustomCalendarWidget::RestDay);
-        }
-    }
+            
+    qDebug() << "Signals connected";
 }
+
 
 void MainWindow::createActions()
 {
     // Create New Workout action
     newWorkoutAction = new QAction(tr("New Workout"), this);
-    newWorkoutAction->setIcon(QApplication::style()->standardIcon(QStyle::SP_FileIcon));
+    QIcon plusIcon = QIcon::fromTheme("list-add");
+    if (plusIcon.isNull()) {
+        QPixmap pixmap(24, 24);
+        pixmap.fill(Qt::transparent);
+        QPainter painter(&pixmap);
+        painter.setPen(QPen(QColor("#4CAF50"), 2));
+        painter.drawLine(12, 6, 12, 18);
+        painter.drawLine(6, 12, 18, 12);
+        plusIcon = QIcon(pixmap);
+    }
+    newWorkoutAction->setIcon(plusIcon);
     connect(newWorkoutAction, &QAction::triggered, this, &MainWindow::createNewWorkout);
 
-    // Create Edit Workout action
-    editWorkoutAction = new QAction(tr("Edit Workout"), this);
+    // Create View/Edit Workout action
+    editWorkoutAction = new QAction(tr("View/Edit Workout"), this);  // Изменили текст
     editWorkoutAction->setIcon(QApplication::style()->standardIcon(QStyle::SP_FileDialogDetailedView));
     connect(editWorkoutAction, &QAction::triggered, this, &MainWindow::editWorkout);
 
@@ -94,17 +95,19 @@ void MainWindow::createToolBar()
 
 void MainWindow::createNewWorkout()
 {
-    WorkoutDialog dialog(calendar->selectedDate(), this);
-    if (dialog.exec() == QDialog::Accepted) {
-        // Just mark that this day has a workout but keep NoWorkout status
-        calendar->setDayStatus(calendar->selectedDate(), CustomCalendarWidget::NoWorkout);
-        handleDayClicked(calendar->selectedDate());
-    }
+    showWorkoutDialog(calendar->selectedDate(), false);
 }
 
 void MainWindow::editWorkout()
 {
-    // TODO: Implement workout editing
+    QDate selectedDate = calendar->selectedDate();
+    if (calendar->hasWorkout(selectedDate)) {
+        qDebug() << "Opening workout for viewing/editing:" << selectedDate;
+        showWorkoutDialog(selectedDate, true);
+    } else {
+        QMessageBox::information(this, tr("No Workout"),
+            tr("No workout found for selected date. Use '+' button to create a new one."));
+    }
 }
 
 void MainWindow::switchToMonthView()
@@ -117,30 +120,84 @@ void MainWindow::switchToWeekView()
     // TODO: Implement switch to week view
 }
 
+
+void MainWindow::handleDayDoubleClicked(const QDate &date)
+{
+    qDebug() << "Double click handler called for date:" << date;
+    QString name, description;
+    
+    if (calendar->hasWorkout(date)) {
+        if (calendar->getWorkoutData(date, name, description)) {
+            WorkoutDialog* dialog = new WorkoutDialog(date, this);
+            dialog->setWorkoutName(name);
+            dialog->setWorkoutDescription(description);
+            dialog->setReadOnly(true);
+            dialog->exec();
+            delete dialog;
+        }
+    }
+}
+
+
 void MainWindow::handleDayClicked(const QDate &date)
 {
     CustomCalendarWidget::WorkoutStatus status = calendar->getDayStatus(date);
     QString statusStr;
+    QString name, description;
     
-    switch (status) {
-        case CustomCalendarWidget::Completed:
-            statusStr = "Completed workout";
-            statusLabel->setStyleSheet("QLabel { color: #4CAF50; padding: 5px; }");  // Green
-            break;
-        case CustomCalendarWidget::Missed:
-            statusStr = "Missed workout";
-            statusLabel->setStyleSheet("QLabel { color: #F44336; padding: 5px; }");  // Red
-            break;
-        case CustomCalendarWidget::RestDay:
-            statusStr = "Rest day";
-            statusLabel->setStyleSheet("QLabel { color: #9E9E9E; padding: 5px; }");  // Grey
-            break;
-        default:
-            statusStr = "No workout planned";
-            statusLabel->setStyleSheet("QLabel { color: white; padding: 5px; }");
+    if (calendar->hasWorkout(date) && calendar->getWorkoutData(date, name, description)) {
+        statusStr = QString("Workout: %1").arg(name);
+    } else {
+        switch (status) {
+            case CustomCalendarWidget::Completed:
+                statusStr = "Completed workout";
+                statusLabel->setStyleSheet("QLabel { color: #4CAF50; padding: 5px; }");
+                break;
+            case CustomCalendarWidget::Missed:
+                statusStr = "Missed workout";
+                statusLabel->setStyleSheet("QLabel { color: #F44336; padding: 5px; }");
+                break;
+            case CustomCalendarWidget::RestDay:
+                statusStr = "Rest day";
+                statusLabel->setStyleSheet("QLabel { color: #9E9E9E; padding: 5px; }");
+                break;
+            default:
+                statusStr = "No workout planned";
+                statusLabel->setStyleSheet("QLabel { color: white; padding: 5px; }");
+        }
     }
     
     statusLabel->setText(QString("Selected: %1 - %2")
                         .arg(date.toString("dd.MM.yyyy"))
                         .arg(statusStr));
+}
+
+
+void MainWindow::showWorkoutDialog(const QDate &date, bool readOnly)
+{
+    qDebug() << "Showing dialog for date:" << date << "readonly:" << readOnly;
+    
+    WorkoutDialog* dialog = new WorkoutDialog(date, this);
+    
+    if (readOnly && calendar->hasWorkout(date)) {
+        QString name, description;
+        if (calendar->getWorkoutData(date, name, description)) {
+            dialog->setWorkoutName(name);
+            dialog->setWorkoutDescription(description);
+            dialog->setReadOnly(true);
+            qDebug() << "Loading workout data:" << name << description;
+        }
+    }
+    
+    if (dialog->exec() == QDialog::Accepted && !readOnly) {
+        QString name = dialog->getWorkoutName();
+        QString description = dialog->getWorkoutDescription();
+        qDebug() << "Saving workout data:" << name << description;
+        
+        calendar->setWorkoutData(date, name, description);
+        calendar->setDayStatus(date, CustomCalendarWidget::NoWorkout);
+        handleDayClicked(date);
+    }
+    
+    delete dialog;
 }
