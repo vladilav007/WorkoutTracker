@@ -175,22 +175,28 @@ void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, QDate
 
 void CustomCalendarWidget::setWorkoutData(const QDate &date, 
                                         const QString &name,
-                                        const QString &description)
+                                        const QString &description,
+                                        const QVector<Exercise> &exercises)
 {
     WorkoutInfo info;
     info.name = name;
     info.description = description;
+    info.exercises = exercises;
     workoutData[date] = info;
     workoutMap[date] = true;
     updateCell(date);
 }
 
-bool CustomCalendarWidget::getWorkoutData(const QDate &date, QString &name, QString &description) const
+bool CustomCalendarWidget::getWorkoutData(const QDate &date, 
+                                        QString &name, 
+                                        QString &description,
+                                        QVector<Exercise> &exercises) const
 {
     if (workoutData.contains(date)) {
         const WorkoutInfo &info = workoutData[date];
         name = info.name;
         description = info.description;
+        exercises = info.exercises;
         return true;
     }
     return false;

@@ -39,7 +39,6 @@ void MainWindow::setupUI()
     calendar = new CustomCalendarWidget(this);
     mainLayout->addWidget(calendar);
     
-    // Подключаем сигнал только один раз
     connect(calendar, &CustomCalendarWidget::dayDoubleClicked, 
             this, &MainWindow::handleDayDoubleClicked);
     
@@ -125,12 +124,14 @@ void MainWindow::handleDayDoubleClicked(const QDate &date)
 {
     qDebug() << "Double click handler called for date:" << date;
     QString name, description;
+    QVector<Exercise> exercises;
     
     if (calendar->hasWorkout(date)) {
-        if (calendar->getWorkoutData(date, name, description)) {
+        if (calendar->getWorkoutData(date, name, description, exercises)) {
             WorkoutDialog* dialog = new WorkoutDialog(date, this);
             dialog->setWorkoutName(name);
             dialog->setWorkoutDescription(description);
+            dialog->setExercises(exercises);
             dialog->setReadOnly(true);
             dialog->exec();
             delete dialog;
@@ -144,9 +145,13 @@ void MainWindow::handleDayClicked(const QDate &date)
     CustomCalendarWidget::WorkoutStatus status = calendar->getDayStatus(date);
     QString statusStr;
     QString name, description;
+    QVector<Exercise> exercises;
     
-    if (calendar->hasWorkout(date) && calendar->getWorkoutData(date, name, description)) {
-        statusStr = QString("Workout: %1").arg(name);
+    if (calendar->hasWorkout(date) && calendar->getWorkoutData(date, name, description, exercises)) {
+        // Добавим информацию о количестве упражнений в статус
+        statusStr = QString("Workout: %1 (%2 exercises)")
+                    .arg(name)
+                    .arg(exercises.size());
     } else {
         switch (status) {
             case CustomCalendarWidget::Completed:
@@ -181,9 +186,11 @@ void MainWindow::showWorkoutDialog(const QDate &date, bool readOnly)
     
     if (readOnly && calendar->hasWorkout(date)) {
         QString name, description;
-        if (calendar->getWorkoutData(date, name, description)) {
+        QVector<Exercise> exercises;
+        if (calendar->getWorkoutData(date, name, description, exercises)) {
             dialog->setWorkoutName(name);
             dialog->setWorkoutDescription(description);
+            dialog->setExercises(exercises);
             dialog->setReadOnly(true);
             qDebug() << "Loading workout data:" << name << description;
         }
@@ -192,9 +199,10 @@ void MainWindow::showWorkoutDialog(const QDate &date, bool readOnly)
     if (dialog->exec() == QDialog::Accepted && !readOnly) {
         QString name = dialog->getWorkoutName();
         QString description = dialog->getWorkoutDescription();
+        QVector<Exercise> exercises = dialog->getExercises();
         qDebug() << "Saving workout data:" << name << description;
         
-        calendar->setWorkoutData(date, name, description);
+        calendar->setWorkoutData(date, name, description, exercises);
         calendar->setDayStatus(date, CustomCalendarWidget::NoWorkout);
         handleDayClicked(date);
     }

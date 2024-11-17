@@ -8,6 +8,7 @@
 #include <QDate>
 #include <QMenu>
 #include <QPropertyAnimation>
+#include "../models/types.h"
 
 class CustomCalendarWidget : public QCalendarWidget
 {
@@ -28,10 +29,17 @@ public:
     WorkoutStatus getDayStatus(const QDate &date) const;
     bool hasWorkout(const QDate &date) const;
     void setWorkoutData(const QDate &date, const QString &name, const QString &description);
-    bool getWorkoutData(const QDate &date, QString &name, QString &description) const;
 
     qreal selectionOpacity() const { return m_selectionOpacity; }
     void setSelectionOpacity(qreal opacity);
+
+    void setWorkoutData(const QDate &date, const QString &name, 
+                    const QString &description,
+                    const QVector<Exercise> &exercises);
+
+    bool getWorkoutData(const QDate &date, QString &name, 
+                   QString &description,
+                   QVector<Exercise> &exercises) const;
 
 signals:
     void dayDoubleClicked(const QDate &date);
@@ -51,6 +59,7 @@ private:
     struct WorkoutInfo {
         QString name;
         QString description;
+        QVector<Exercise> exercises;
     };
     QMap<QDate, WorkoutInfo> workoutData;
     

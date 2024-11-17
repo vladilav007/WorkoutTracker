@@ -87,6 +87,14 @@ void WorkoutDialog::addExercise()
 {
     int row = exerciseTable->rowCount();
     exerciseTable->insertRow(row);
+    
+    QTableWidgetItem *nameItem = new QTableWidgetItem("");
+    QTableWidgetItem *setsItem = new QTableWidgetItem("0");
+    QTableWidgetItem *repsItem = new QTableWidgetItem("0");
+    
+    exerciseTable->setItem(row, 0, nameItem);
+    exerciseTable->setItem(row, 1, setsItem);
+    exerciseTable->setItem(row, 2, repsItem);
 }
 
 void WorkoutDialog::removeExercise()
@@ -98,6 +106,32 @@ void WorkoutDialog::removeExercise()
     }
 }
 
+QVector<Exercise> WorkoutDialog::getExercises() const
+{
+    return getCurrentExercises();
+}
+
+void WorkoutDialog::setExercises(const QVector<Exercise> &exercises)
+{
+    exerciseTable->setRowCount(0);
+    for (const Exercise &exercise : exercises) {
+        addExerciseRow(exercise.name, exercise.sets, exercise.reps);
+    }
+}
+
+QVector<Exercise> WorkoutDialog::getCurrentExercises() const
+{
+    QVector<Exercise> exercises;
+    for (int row = 0; row < exerciseTable->rowCount(); ++row) {
+        Exercise exercise;
+        exercise.name = exerciseTable->item(row, 0)->text();
+        exercise.sets = exerciseTable->item(row, 1)->text().toInt();
+        exercise.reps = exerciseTable->item(row, 2)->text().toInt();
+        exercises.append(exercise);
+    }
+    return exercises;
+}
+
 void WorkoutDialog::saveWorkout()
 {
     if (nameEdit->text().isEmpty()) {
@@ -105,8 +139,6 @@ void WorkoutDialog::saveWorkout()
                            tr("Please enter a workout name."));
         return;
     }
-    
-    // TODO: Save exercise data here
     
     accept();
 }
@@ -133,26 +165,21 @@ void WorkoutDialog::addExerciseRow(const QString &name, int sets, int reps)
 
 void WorkoutDialog::updateControlsState()
 {
-    // Disable editing in read-only mode
     nameEdit->setReadOnly(isReadOnly);
     descriptionEdit->setReadOnly(isReadOnly);
     exerciseTable->setEditTriggers(isReadOnly ? QAbstractItemView::NoEditTriggers 
                                             : QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
     
-    // Show/hide buttons appropriately
     addExerciseButton->setVisible(!isReadOnly);
     removeExerciseButton->setVisible(!isReadOnly);
     saveButton->setVisible(!isReadOnly);
     editButton->setVisible(isReadOnly);
     
-    // Update cancel button text
     cancelButton->setText(isReadOnly ? tr("Close") : tr("Cancel"));
 }
 
 void WorkoutDialog::editWorkout()
 {
     setReadOnly(false);
-    // When switching to edit mode, ensure save button is visible
     saveButton->setVisible(true);
 }
-

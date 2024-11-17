@@ -8,6 +8,7 @@
 #include <QTableWidget>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include "../models/types.h"
 
 class WorkoutDialog : public QDialog
 {
@@ -25,6 +26,8 @@ public:
     QString getWorkoutDescription() const { return descriptionEdit->toPlainText(); }
     void setWorkoutName(const QString &name) { nameEdit->setText(name); }
     void setWorkoutDescription(const QString &desc) { descriptionEdit->setText(desc); }
+    QVector<Exercise> getExercises() const;
+    void setExercises(const QVector<Exercise> &exercises);
 
 private slots:
     void addExercise();
@@ -48,6 +51,7 @@ private:
     
     QDate workoutDate;
     bool isReadOnly;
+    QVector<Exercise> getCurrentExercises() const;
 };
 
 #endif // WORKOUTDIALOG_H

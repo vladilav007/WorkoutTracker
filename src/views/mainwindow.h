@@ -7,6 +7,7 @@
 #include <QToolBar>
 #include <QAction>
 #include <QLabel>
+#include "../models/types.h"
 #include "customcalendarwidget.h"
 #include "workoutdialog.h"
 
