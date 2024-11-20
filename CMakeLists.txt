@@ -31,6 +31,7 @@ set(SOURCES
     src/views/customcalendarwidget.cpp
     src/views/workoutdialog.cpp
     src/models/workout_data.cpp
+    src/models/storage_manager.cpp 
 )
 
 set(HEADERS
@@ -38,6 +39,7 @@ set(HEADERS
     src/views/customcalendarwidget.h
     src/views/workoutdialog.h
     src/models/workout_data.h
+    src/models/storage_manager.h
 )
 
 add_executable(WorkoutTracker

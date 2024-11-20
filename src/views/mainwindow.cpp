@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "customcalendarwidget.h"
+#include "../models/storage_manager.h"
 #include <QStyle>
 #include <QApplication>
 #include <QDate>
@@ -16,6 +17,22 @@ MainWindow::MainWindow(QWidget *parent)
     setupUI();
     createActions();
     createToolBar();
+    
+    qDebug() << "Loading saved workouts...";
+    StorageManager::instance().loadFromFile();
+    
+    QVector<QDate> dates = StorageManager::instance().getAllWorkoutDates();
+    qDebug() << "Found" << dates.size() << "saved workouts";
+    for (const QDate& date : dates) {
+        QString name, description;
+        QVector<Exercise> exercises;
+        CustomCalendarWidget::WorkoutStatus status;
+        
+        if (StorageManager::instance().loadWorkout(date, name, description, exercises, status)) {
+            calendar->setWorkoutData(date, name, description, exercises);
+            calendar->setDayStatus(date, status);
+        }
+    }
     
     setWindowTitle(tr("Workout Tracker"));
     resize(800, 600);
@@ -168,7 +185,9 @@ void MainWindow::showWorkoutDialog(const QDate &date, bool readOnly)
     if (readOnly && calendar->hasWorkout(date)) {
         QString name, description;
         QVector<Exercise> exercises;
-        if (calendar->getWorkoutData(date, name, description, exercises)) {
+        CustomCalendarWidget::WorkoutStatus status;
+        
+        if (StorageManager::instance().loadWorkout(date, name, description, exercises, status)) {
             dialog->setWorkoutName(name);
             dialog->setWorkoutDescription(description);
             dialog->setExercises(exercises);
@@ -181,11 +200,14 @@ void MainWindow::showWorkoutDialog(const QDate &date, bool readOnly)
         QString name = dialog->getWorkoutName();
         QString description = dialog->getWorkoutDescription();
         QVector<Exercise> exercises = dialog->getExercises();
-        qDebug() << "Saving workout data:" << name << description;
+        CustomCalendarWidget::WorkoutStatus status = calendar->getDayStatus(date);
         
+        StorageManager::instance().saveWorkout(date, name, description, exercises, status);
         calendar->setWorkoutData(date, name, description, exercises);
-        calendar->setDayStatus(date, CustomCalendarWidget::NoWorkout);
+        calendar->setDayStatus(date, status);
         handleDayClicked(date);
+        
+        qDebug() << "Saved workout data:" << name << description;
     }
     
     delete dialog;
