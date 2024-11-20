@@ -71,21 +71,15 @@ void CustomCalendarWidget::setSelectionOpacity(qreal opacity)
     update();
 }
 
-void CustomCalendarWidget::mouseDoubleClickEvent(QMouseEvent *event)
-{
-    QCalendarWidget::mouseDoubleClickEvent(event);
-    QDate clickedDate = selectedDate();
-    if (hasWorkout(clickedDate)) {
-        qDebug() << "Double click detected on workout day:" << clickedDate;
-        emit dayDoubleClicked(clickedDate);
-    }
-}
-
 void CustomCalendarWidget::mousePressEvent(QMouseEvent *event)
 {
     QCalendarWidget::mousePressEvent(event);
-    if (event->button() == Qt::LeftButton) {
-        startSelectionAnimation();
+    
+    // Обрабатываем правую кнопку мыши для контекстного меню
+    if (event->button() == Qt::RightButton) {
+        QDate date = selectedDate();
+        QPoint globalPos = event->globalPosition().toPoint();
+        createContextMenu(date, globalPos);
     }
 }
 

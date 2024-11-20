@@ -1,4 +1,5 @@
-// mainwindow.h
+//src/views/mainwindow.h:
+
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
@@ -25,7 +26,7 @@ private slots:
     void switchToMonthView();
     void switchToWeekView();
     void handleDayClicked(const QDate &date);
-    void handleDayDoubleClicked(const QDate &date);  // Оставляем только одно объявление
+    // Удаляем объявление handleDayDoubleClicked
 
 private:
     void setupUI();

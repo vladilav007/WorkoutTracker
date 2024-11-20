@@ -42,10 +42,8 @@ public:
                    QVector<Exercise> &exercises) const;
 
 signals:
-    void dayDoubleClicked(const QDate &date);
 
 protected:
-    void mouseDoubleClickEvent(QMouseEvent *event) override;
     void paintCell(QPainter *painter, const QRect &rect, QDate date) const override;
     void contextMenuEvent(QContextMenuEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;

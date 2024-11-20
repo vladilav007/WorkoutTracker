@@ -39,13 +39,10 @@ void MainWindow::setupUI()
     calendar = new CustomCalendarWidget(this);
     mainLayout->addWidget(calendar);
     
-    connect(calendar, &CustomCalendarWidget::dayDoubleClicked, 
-            this, &MainWindow::handleDayDoubleClicked);
-    
     connect(calendar, &QCalendarWidget::clicked,
             this, &MainWindow::handleDayClicked);
             
-    qDebug() << "Signals connected";
+    qDebug() << "UI setup completed, signals connected";
 }
 
 
@@ -119,39 +116,23 @@ void MainWindow::switchToWeekView()
     // TODO: Implement switch to week view
 }
 
-
-void MainWindow::handleDayDoubleClicked(const QDate &date)
-{
-    qDebug() << "Double click handler called for date:" << date;
-    QString name, description;
-    QVector<Exercise> exercises;
-    
-    if (calendar->hasWorkout(date)) {
-        if (calendar->getWorkoutData(date, name, description, exercises)) {
-            WorkoutDialog* dialog = new WorkoutDialog(date, this);
-            dialog->setWorkoutName(name);
-            dialog->setWorkoutDescription(description);
-            dialog->setExercises(exercises);
-            dialog->setReadOnly(true);
-            dialog->exec();
-            delete dialog;
-        }
-    }
-}
-
-
 void MainWindow::handleDayClicked(const QDate &date)
 {
     CustomCalendarWidget::WorkoutStatus status = calendar->getDayStatus(date);
     QString statusStr;
     QString name, description;
     QVector<Exercise> exercises;
-    
-    if (calendar->hasWorkout(date) && calendar->getWorkoutData(date, name, description, exercises)) {
-        // Добавим информацию о количестве упражнений в статус
-        statusStr = QString("Workout: %1 (%2 exercises)")
-                    .arg(name)
-                    .arg(exercises.size());
+
+    if (calendar->hasWorkout(date)) {
+        if (calendar->getWorkoutData(date, name, description, exercises)) {
+            // При клике на день с тренировкой сразу открываем диалог
+            showWorkoutDialog(date, true);
+            
+            // Обновляем статусную строку
+            statusStr = QString("Workout: %1 (%2 exercises)")
+                        .arg(name)
+                        .arg(exercises.size());
+        }
     } else {
         switch (status) {
             case CustomCalendarWidget::Completed:
