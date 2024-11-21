@@ -14,9 +14,10 @@ StorageManager& StorageManager::instance()
     return instance;
 }
 
-bool StorageManager::saveWorkout(const QDate& date, const QString& name, 
-                               const QString& description, 
-                               const QVector<Exercise>& exercises,
+bool StorageManager::saveWorkout(const QDate &date, 
+                               const QString &name, 
+                               const QString &description, 
+                               const QVector<Exercise> &exercises,  // Changed from reference
                                CustomCalendarWidget::WorkoutStatus status)
 {
     WorkoutData workout;
@@ -26,10 +27,11 @@ bool StorageManager::saveWorkout(const QDate& date, const QString& name,
     workout.status = status;
     
     workouts[date] = workout;
-    return saveToFile();
+    return saveToFile(); // Return the result of saving
 }
 
-bool StorageManager::loadWorkout(const QDate& date, QString& name, 
+bool StorageManager::loadWorkout(const QDate& date, 
+                               QString& name,
                                QString& description,
                                QVector<Exercise>& exercises,
                                CustomCalendarWidget::WorkoutStatus& status)
@@ -59,10 +61,9 @@ QString StorageManager::getWorkoutFilePath()
 bool StorageManager::saveToFile(const QString& filename)
 {
     QString filePath = filename.isEmpty() ? getWorkoutFilePath() : filename;
-    qDebug() << "Saving workouts to:" << filePath;  // Добавляем вывод
+    qDebug() << "Saving workouts to:" << filePath;
     
     QFile file(filePath);
-    
     if (!file.open(QIODevice::WriteOnly)) {
         qWarning() << "Could not open file for writing:" << filePath;
         return false;
@@ -74,6 +75,7 @@ bool StorageManager::saveToFile(const QString& filename)
     for (auto it = workouts.begin(); it != workouts.end(); ++it) {
         QJsonObject workoutObj = workoutToJson(it.value());
         workoutObj["date"] = it.key().toString(Qt::ISODate);
+        workoutObj["status"] = static_cast<int>(it.value().status);
         workoutsArray.append(workoutObj);
     }
     
@@ -91,11 +93,11 @@ bool StorageManager::loadFromFile(const QString& filename)
     QString filePath = filename.isEmpty() ? getWorkoutFilePath() : filename;
     qDebug() << "Loading workouts from:" << filePath;
     
-    QFile file(filePath);  // Добавляем объявление QFile
+    QFile file(filePath);
     
     if (!file.exists()) {
         qInfo() << "No saved workouts found at:" << filePath;
-        return true; // Не считаем отсутствие файла ошибкой
+        return true;
     }
     
     if (!file.open(QIODevice::ReadOnly)) {
@@ -117,10 +119,40 @@ bool StorageManager::loadFromFile(const QString& filename)
     for (const QJsonValue& value : workoutsArray) {
         QJsonObject workoutObj = value.toObject();
         QDate date = QDate::fromString(workoutObj["date"].toString(), Qt::ISODate);
-        workouts[date] = workoutFromJson(workoutObj);
+        WorkoutData workout = workoutFromJson(workoutObj);
+        
+        // Load status
+        if (workoutObj.contains("status")) {
+            workout.status = static_cast<CustomCalendarWidget::WorkoutStatus>(
+                workoutObj["status"].toInt());
+        }
+        
+        workouts[date] = workout;
+        qDebug() << "Loaded workout for" << date << "with status" << workout.status;
     }
     
     return true;
+}
+
+StorageManager::WorkoutData StorageManager::workoutFromJson(const QJsonObject& json) const
+{
+    WorkoutData workout;
+    workout.name = json["name"].toString();
+    workout.description = json["description"].toString();
+    workout.status = static_cast<CustomCalendarWidget::WorkoutStatus>(
+        json["status"].toInt(static_cast<int>(CustomCalendarWidget::NoWorkout)));
+    
+    QJsonArray exercisesArray = json["exercises"].toArray();
+    for (const QJsonValue& value : exercisesArray) {
+        QJsonObject exerciseObj = value.toObject();
+        Exercise exercise;
+        exercise.name = exerciseObj["name"].toString();
+        exercise.sets = exerciseObj["sets"].toInt();
+        exercise.reps = exerciseObj["reps"].toInt();
+        workout.exercises.append(exercise);
+    }
+    
+    return workout;
 }
 
 QJsonObject StorageManager::workoutToJson(const WorkoutData& workout) const
@@ -141,26 +173,6 @@ QJsonObject StorageManager::workoutToJson(const WorkoutData& workout) const
     
     json["exercises"] = exercisesArray;
     return json;
-}
-
-StorageManager::WorkoutData StorageManager::workoutFromJson(const QJsonObject& json) const
-{
-    WorkoutData workout;
-    workout.name = json["name"].toString();
-    workout.description = json["description"].toString();
-    workout.status = static_cast<CustomCalendarWidget::WorkoutStatus>(json["status"].toInt());
-    
-    QJsonArray exercisesArray = json["exercises"].toArray();
-    for (const QJsonValue& value : exercisesArray) {
-        QJsonObject exerciseObj = value.toObject();
-        Exercise exercise;
-        exercise.name = exerciseObj["name"].toString();
-        exercise.sets = exerciseObj["sets"].toInt();
-        exercise.reps = exerciseObj["reps"].toInt();
-        workout.exercises.append(exercise);
-    }
-    
-    return workout;
 }
 
 void StorageManager::clearAllData()

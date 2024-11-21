@@ -30,6 +30,8 @@ set(SOURCES
     src/views/mainwindow.cpp
     src/views/customcalendarwidget.cpp
     src/views/workoutdialog.cpp
+    src/views/weekview.cpp
+    src/views/weekviewcell.cpp
     src/models/workout_data.cpp
     src/models/storage_manager.cpp 
 )
@@ -38,8 +40,11 @@ set(HEADERS
     src/views/mainwindow.h
     src/views/customcalendarwidget.h
     src/views/workoutdialog.h
+    src/views/weekview.h
+    src/views/weekviewcell.h
     src/models/workout_data.h
     src/models/storage_manager.h
+    src/models/types.h
 )
 
 add_executable(WorkoutTracker

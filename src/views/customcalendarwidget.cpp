@@ -195,3 +195,35 @@ bool CustomCalendarWidget::getWorkoutData(const QDate &date,
     }
     return false;
 }
+
+void CustomCalendarWidget::loadSavedData()
+{
+    StorageManager& storage = StorageManager::instance();
+    QVector<QDate> dates = storage.getAllWorkoutDates();
+    
+    for (const QDate& date : dates) {
+        QString name, description;
+        QVector<Exercise> exercises;
+        CustomCalendarWidget::WorkoutStatus status;
+        
+        if (storage.loadWorkout(date, name, description, exercises, status)) {
+            // Set workout indicator
+            workoutMap[date] = true;
+            
+            // Set status
+            dayStatusMap[date] = status;
+            
+            // Set workout data
+            WorkoutInfo info;
+            info.name = name;
+            info.description = description;
+            info.exercises = exercises;
+            workoutData[date] = info;
+            
+            updateCell(date);
+        }
+    }
+    
+    // Force complete repaint
+    update();
+}
