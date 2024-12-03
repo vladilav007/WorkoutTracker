@@ -1,4 +1,4 @@
-// customcalendarwidget.h
+// src/views/customcalendarwidget.h
 #ifndef CUSTOMCALENDARWIDGET_H
 #define CUSTOMCALENDARWIDGET_H
 
@@ -9,6 +9,7 @@
 #include <QMenu>
 #include <QPropertyAnimation>
 #include "../models/types.h"
+#include "../models/workout_status.h"
 #include "../models/storage_manager.h"
 
 class CustomCalendarWidget : public QCalendarWidget
@@ -17,12 +18,7 @@ class CustomCalendarWidget : public QCalendarWidget
     Q_PROPERTY(qreal selectionOpacity READ selectionOpacity WRITE setSelectionOpacity)
 
 public:
-    enum WorkoutStatus {
-        NoWorkout,
-        Completed,
-        Missed,
-        RestDay
-    };
+    using WorkoutStatus = ::WorkoutStatus;  // Using the global WorkoutStatus
 
     explicit CustomCalendarWidget(QWidget *parent = nullptr);
 
@@ -39,7 +35,6 @@ public:
     
     void loadSavedData();
     
-    // Add animation related methods
     qreal selectionOpacity() const { return m_selectionOpacity; }
     void setSelectionOpacity(qreal opacity);
     void startSelectionAnimation();
@@ -48,6 +43,9 @@ protected:
     void paintCell(QPainter *painter, const QRect &rect, QDate date) const override;
     void contextMenuEvent(QContextMenuEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
+
+signals:
+    void statusChanged(const QDate& date, WorkoutStatus status);
 
 private:
     QMap<QDate, WorkoutStatus> dayStatusMap;

@@ -3,6 +3,7 @@
 #include <QPainter>
 #include <QMouseEvent>
 #include <QDebug>
+#include "../models/workout_status.h"
 
 WeekView::WeekView(QWidget* parent)
     : QWidget(parent)
@@ -14,6 +15,8 @@ WeekView::WeekView(QWidget* parent)
 
     createHeaderLabels();
     createWeekCells();
+    
+    QTimer::singleShot(0, this, &WeekView::loadWorkoutData);
     
     // Connect signals for cells
     for (auto cell : m_cells) {
@@ -71,12 +74,14 @@ void WeekView::loadWorkoutData()
         
         QString name, description;
         QVector<Exercise> exercises;
-        CustomCalendarWidget::WorkoutStatus status;
+        WorkoutStatus status;
         
         if (storage.loadWorkout(date, name, description, exercises, status)) {
             cell->setWorkoutData(name, description, exercises, status);
         } else {
-            cell->setWorkoutData("", "", QVector<Exercise>(), CustomCalendarWidget::NoWorkout);
+            cell->setWorkoutData("", "", 
+                               QVector<Exercise>(), 
+                               WorkoutStatus::NoWorkout);
         }
         cell->update();
     }
@@ -111,18 +116,15 @@ void WeekView::updateCell(const QDate& date)
     if (auto it = m_cells.find(date); it != m_cells.end()) {
         QString name, description;
         QVector<Exercise> exercises;
-        CustomCalendarWidget::WorkoutStatus status;
+        WorkoutStatus status;
         
-        if (StorageManager::instance().loadWorkout(date, name, 
-                                                 description,
-                                                 exercises,
-                                                 status)) {
+        if (StorageManager::instance().loadWorkout(date, name, description, exercises, status)) {
             it.value()->setWorkoutData(name, description, exercises, status);
+            it.value()->update();
         } else {
-            it.value()->setWorkoutData("", "", QVector<Exercise>(), 
-                                     CustomCalendarWidget::NoWorkout);
+            it.value()->setWorkoutData("", "", QVector<Exercise>(), WorkoutStatus::NoWorkout);
+            it.value()->update();
         }
-        it.value()->update();
     }
 }
 
@@ -134,10 +136,9 @@ bool WeekView::hasWorkout(const QDate& date) const
     return false;
 }
 
-void WeekView::updateCellStatus(const QDate& date, CustomCalendarWidget::WorkoutStatus status)
+void WeekView::updateCellStatus(const QDate& date, WorkoutStatus status)
 {
     if (auto cell = m_cells.value(date)) {
-        // Update storage first
         QString name = cell->workoutName();
         QString description = cell->workoutDescription();
         QVector<Exercise> exercises = cell->workoutExercises();
@@ -147,6 +148,9 @@ void WeekView::updateCellStatus(const QDate& date, CustomCalendarWidget::Workout
         // Then update the cell
         cell->setWorkoutData(name, description, exercises, status);
         cell->update();
+        
+        // Emit signal about status change
+        emit statusChanged(date, status);
     }
 }
 
@@ -160,19 +164,24 @@ void WeekView::handleCellContextMenu(const QDate& date, const QPoint& globalPos)
     QAction* restAction = menu.addAction(tr("Mark as Rest Day"));
     
     connect(completedAction, &QAction::triggered, [this, date]() {
-        updateCellStatus(date, CustomCalendarWidget::Completed);
+        // Use updateCellStatus which will also emit the signal
+        updateCellStatus(date, WorkoutStatus::Completed);
+        emit statusChanged(date, WorkoutStatus::Completed);
     });
     
     connect(missedAction, &QAction::triggered, [this, date]() {
-        updateCellStatus(date, CustomCalendarWidget::Missed);
+        updateCellStatus(date, WorkoutStatus::Missed);
+        emit statusChanged(date, WorkoutStatus::Missed);
     });
     
     connect(plannedAction, &QAction::triggered, [this, date]() {
-        updateCellStatus(date, CustomCalendarWidget::NoWorkout);
+        updateCellStatus(date, WorkoutStatus::NoWorkout);
+        emit statusChanged(date, WorkoutStatus::NoWorkout);
     });
     
     connect(restAction, &QAction::triggered, [this, date]() {
-        updateCellStatus(date, CustomCalendarWidget::RestDay);
+        updateCellStatus(date, WorkoutStatus::RestDay);
+        emit statusChanged(date, WorkoutStatus::RestDay);
     });
     
     menu.exec(globalPos);

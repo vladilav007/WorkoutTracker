@@ -39,11 +39,12 @@ void CustomCalendarWidget::setDayStatus(const QDate &date, WorkoutStatus status)
     dayStatusMap[date] = status;
     workoutMap[date] = true;
     updateCell(date);
+    emit statusChanged(date, status);
 }
 
-CustomCalendarWidget::WorkoutStatus CustomCalendarWidget::getDayStatus(const QDate &date) const
+WorkoutStatus CustomCalendarWidget::getDayStatus(const QDate &date) const
 {
-    return dayStatusMap.value(date, NoWorkout);
+    return dayStatusMap.value(date, WorkoutStatus::NoWorkout);
 }
 
 bool CustomCalendarWidget::hasWorkout(const QDate &date) const
@@ -54,11 +55,11 @@ bool CustomCalendarWidget::hasWorkout(const QDate &date) const
 QColor CustomCalendarWidget::getStatusColor(WorkoutStatus status) const
 {
     switch (status) {
-        case Completed:
+        case WorkoutStatus::Completed:
             return QColor(76, 175, 80);    // Material Design Green
-        case Missed:
+        case WorkoutStatus::Missed:
             return QColor(244, 67, 54);    // Material Design Red
-        case RestDay:
+        case WorkoutStatus::RestDay:
             return QColor(158, 158, 158);  // Material Design Grey
         default:
             return QColor(45, 45, 45);     // Dark background for default state
@@ -99,25 +100,29 @@ void CustomCalendarWidget::createContextMenu(const QDate &date, const QPoint &po
 {
     QMenu menu(this);
     
-    QAction *completedAction = menu.addAction(tr("Mark as Completed"));
-    QAction *missedAction = menu.addAction(tr("Mark as Missed"));
-    QAction *plannedAction = menu.addAction(tr("Mark as Planned"));
-    QAction *restAction = menu.addAction(tr("Mark as Rest Day"));
+    QAction* completedAction = menu.addAction(tr("Mark as Completed"));
+    QAction* missedAction = menu.addAction(tr("Mark as Missed"));
+    QAction* plannedAction = menu.addAction(tr("Mark as Planned"));
+    QAction* restAction = menu.addAction(tr("Mark as Rest Day"));
     
     connect(completedAction, &QAction::triggered, this, [this, date]() {
-        setDayStatus(date, Completed);
+        setDayStatus(date, WorkoutStatus::Completed);
+        emit statusChanged(date, WorkoutStatus::Completed);
     });
     
     connect(missedAction, &QAction::triggered, this, [this, date]() {
-        setDayStatus(date, Missed);
+        setDayStatus(date, WorkoutStatus::Missed);
+        emit statusChanged(date, WorkoutStatus::Missed);
     });
     
     connect(plannedAction, &QAction::triggered, this, [this, date]() {
-        setDayStatus(date, NoWorkout);
+        setDayStatus(date, WorkoutStatus::NoWorkout);
+        emit statusChanged(date, WorkoutStatus::NoWorkout);
     });
     
     connect(restAction, &QAction::triggered, this, [this, date]() {
-        setDayStatus(date, RestDay);
+        setDayStatus(date, WorkoutStatus::RestDay);
+        emit statusChanged(date, WorkoutStatus::RestDay);
     });
     
     menu.exec(pos);
@@ -141,9 +146,9 @@ void CustomCalendarWidget::paintCell(QPainter *painter, const QRect &rect, QDate
     painter->drawRect(rect);
     
     bool isWeekend = date.dayOfWeek() > 5;
-    QColor textColor = (status == NoWorkout) 
+    QColor textColor = (status == WorkoutStatus::NoWorkout)
         ? (isWeekend ? QColor(244, 67, 54) : QColor(255, 255, 255))
-        : (status == Missed ? QColor(255, 255, 255) : QColor(0, 0, 0));
+        : (status == WorkoutStatus::Missed ? QColor(255, 255, 255) : QColor(0, 0, 0));
     
     painter->setPen(textColor);
     
@@ -204,26 +209,25 @@ void CustomCalendarWidget::loadSavedData()
     for (const QDate& date : dates) {
         QString name, description;
         QVector<Exercise> exercises;
-        CustomCalendarWidget::WorkoutStatus status;
+        WorkoutStatus status;
         
         if (storage.loadWorkout(date, name, description, exercises, status)) {
-            // Set workout indicator
-            workoutMap[date] = true;
+            // Устанавливаем данные тренировки
+            setWorkoutData(date, name, description, exercises);
             
-            // Set status
-            dayStatusMap[date] = status;
+            // Устанавливаем статус
+            setDayStatus(date, status);
             
-            // Set workout data
-            WorkoutInfo info;
-            info.name = name;
-            info.description = description;
-            info.exercises = exercises;
-            workoutData[date] = info;
-            
+            // Обновляем ячейку
             updateCell(date);
         }
     }
     
-    // Force complete repaint
+    // Принудительное обновление всего виджета
     update();
+    
+    // Испускаем сигнал об изменении для каждой даты
+    for (const QDate& date : dates) {
+        emit statusChanged(date, dayStatusMap.value(date, WorkoutStatus::NoWorkout));
+    }
 }

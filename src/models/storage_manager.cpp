@@ -1,4 +1,4 @@
-// src/models/storage_manager.cpp
+// storage_manager.cpp
 #include "storage_manager.h"
 #include <QFile>
 #include <QJsonDocument>
@@ -14,37 +14,51 @@ StorageManager& StorageManager::instance()
     return instance;
 }
 
-bool StorageManager::saveWorkout(const QDate &date, 
-                               const QString &name, 
-                               const QString &description, 
-                               const QVector<Exercise> &exercises,  // Changed from reference
-                               CustomCalendarWidget::WorkoutStatus status)
+bool StorageManager::loadFromFile(const QString& filename)
 {
-    WorkoutData workout;
-    workout.name = name;
-    workout.description = description;
-    workout.exercises = exercises;
-    workout.status = status;
+    QString filePath = filename.isEmpty() ? getWorkoutFilePath() : filename;
+    qDebug() << "Loading workouts from:" << filePath;
     
-    workouts[date] = workout;
-    return saveToFile(); // Return the result of saving
-}
-
-bool StorageManager::loadWorkout(const QDate& date, 
-                               QString& name,
-                               QString& description,
-                               QVector<Exercise>& exercises,
-                               CustomCalendarWidget::WorkoutStatus& status)
-{
-    if (!workouts.contains(date)) {
+    QFile file(filePath);
+    
+    if (!file.exists()) {
+        qInfo() << "No saved workouts found at:" << filePath;
+        return true;  // Отсутствие файла не считается ошибкой
+    }
+    
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Could not open file for reading:" << filePath;
         return false;
     }
     
-    const WorkoutData& workout = workouts[date];
-    name = workout.name;
-    description = workout.description;
-    exercises = workout.exercises;
-    status = workout.status;
+    QByteArray saveData = file.readAll();
+    QJsonDocument doc(QJsonDocument::fromJson(saveData));
+    
+    if (!doc.isObject()) {
+        qWarning() << "Invalid JSON format in file:" << filePath;
+        return false;
+    }
+    
+    QJsonObject root = doc.object();
+    QJsonArray workoutsArray = root["workouts"].toArray();
+    
+    workouts.clear();
+    
+    for (const QJsonValue& value : workoutsArray) {
+        QJsonObject workoutObj = value.toObject();
+        QDate date = QDate::fromString(workoutObj["date"].toString(), Qt::ISODate);
+        
+        if (date.isValid()) {
+            WorkoutData workout = workoutFromJson(workoutObj);
+            workouts[date] = workout;
+            qDebug() << "Loaded workout for" << date 
+                     << "name:" << workout.name 
+                     << "status:" << static_cast<int>(workout.status);
+        } else {
+            qWarning() << "Invalid date in workout data:" << workoutObj["date"].toString();
+        }
+    }
+    
     return true;
 }
 
@@ -75,7 +89,6 @@ bool StorageManager::saveToFile(const QString& filename)
     for (auto it = workouts.begin(); it != workouts.end(); ++it) {
         QJsonObject workoutObj = workoutToJson(it.value());
         workoutObj["date"] = it.key().toString(Qt::ISODate);
-        workoutObj["status"] = static_cast<int>(it.value().status);
         workoutsArray.append(workoutObj);
     }
     
@@ -88,71 +101,54 @@ bool StorageManager::saveToFile(const QString& filename)
     return true;
 }
 
-bool StorageManager::loadFromFile(const QString& filename)
+QVector<QDate> StorageManager::getAllWorkoutDates() const
 {
-    QString filePath = filename.isEmpty() ? getWorkoutFilePath() : filename;
-    qDebug() << "Loading workouts from:" << filePath;
-    
-    QFile file(filePath);
-    
-    if (!file.exists()) {
-        qInfo() << "No saved workouts found at:" << filePath;
-        return true;
-    }
-    
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "Could not open file for reading:" << filePath;
-        return false;
-    }
-    
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-    if (!doc.isObject()) {
-        qWarning() << "Invalid JSON format in file:" << filePath;
-        return false;
-    }
-    
-    QJsonObject root = doc.object();
-    QJsonArray workoutsArray = root["workouts"].toArray();
-    
-    workouts.clear();
-    
-    for (const QJsonValue& value : workoutsArray) {
-        QJsonObject workoutObj = value.toObject();
-        QDate date = QDate::fromString(workoutObj["date"].toString(), Qt::ISODate);
-        WorkoutData workout = workoutFromJson(workoutObj);
-        
-        // Load status
-        if (workoutObj.contains("status")) {
-            workout.status = static_cast<CustomCalendarWidget::WorkoutStatus>(
-                workoutObj["status"].toInt());
-        }
-        
-        workouts[date] = workout;
-        qDebug() << "Loaded workout for" << date << "with status" << workout.status;
-    }
-    
-    return true;
+    return QVector<QDate>(workouts.keys().begin(), workouts.keys().end());
 }
 
-StorageManager::WorkoutData StorageManager::workoutFromJson(const QJsonObject& json) const
+bool StorageManager::hasWorkout(const QDate& date) const
+{
+    return workouts.contains(date);
+}
+
+void StorageManager::clearAllData()
+{
+    workouts.clear();
+    saveToFile();
+}
+
+bool StorageManager::saveWorkout(const QDate &date,
+                               const QString &name,
+                               const QString &description,
+                               const QVector<Exercise> &exercises,
+                               WorkoutStatus status)
 {
     WorkoutData workout;
-    workout.name = json["name"].toString();
-    workout.description = json["description"].toString();
-    workout.status = static_cast<CustomCalendarWidget::WorkoutStatus>(
-        json["status"].toInt(static_cast<int>(CustomCalendarWidget::NoWorkout)));
+    workout.name = name;
+    workout.description = description;
+    workout.exercises = exercises;
+    workout.status = status;
     
-    QJsonArray exercisesArray = json["exercises"].toArray();
-    for (const QJsonValue& value : exercisesArray) {
-        QJsonObject exerciseObj = value.toObject();
-        Exercise exercise;
-        exercise.name = exerciseObj["name"].toString();
-        exercise.sets = exerciseObj["sets"].toInt();
-        exercise.reps = exerciseObj["reps"].toInt();
-        workout.exercises.append(exercise);
+    workouts[date] = workout;
+    return saveToFile();
+}
+
+bool StorageManager::loadWorkout(const QDate& date,
+                               QString& name,
+                               QString& description,
+                               QVector<Exercise>& exercises,
+                               WorkoutStatus& status)
+{
+    if (!workouts.contains(date)) {
+        return false;
     }
     
-    return workout;
+    const WorkoutData& workout = workouts[date];
+    name = workout.name;
+    description = workout.description;
+    exercises = workout.exercises;
+    status = workout.status;
+    return true;
 }
 
 QJsonObject StorageManager::workoutToJson(const WorkoutData& workout) const
@@ -175,18 +171,22 @@ QJsonObject StorageManager::workoutToJson(const WorkoutData& workout) const
     return json;
 }
 
-void StorageManager::clearAllData()
+StorageManager::WorkoutData StorageManager::workoutFromJson(const QJsonObject& json) const
 {
-    workouts.clear();
-    saveToFile();
-}
-
-QVector<QDate> StorageManager::getAllWorkoutDates() const
-{
-    return QVector<QDate>(workouts.keys().begin(), workouts.keys().end());
-}
-
-bool StorageManager::hasWorkout(const QDate& date) const
-{
-    return workouts.contains(date);
+    WorkoutData workout;
+    workout.name = json["name"].toString();
+    workout.description = json["description"].toString();
+    workout.status = static_cast<WorkoutStatus>(json["status"].toInt(0));
+    
+    QJsonArray exercisesArray = json["exercises"].toArray();
+    for (const QJsonValue& value : exercisesArray) {
+        QJsonObject exerciseObj = value.toObject();
+        Exercise exercise;
+        exercise.name = exerciseObj["name"].toString();
+        exercise.sets = exerciseObj["sets"].toInt();
+        exercise.reps = exerciseObj["reps"].toInt();
+        workout.exercises.append(exercise);
+    }
+    
+    return workout;
 }

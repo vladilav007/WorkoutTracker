@@ -45,6 +45,7 @@ set(HEADERS
     src/models/workout_data.h
     src/models/storage_manager.h
     src/models/types.h
+    src/models/workout_status.h
 )
 
 add_executable(WorkoutTracker

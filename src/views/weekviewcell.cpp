@@ -1,4 +1,4 @@
-// src/views/weekviewcell.cpp
+// weekviewcell.cpp
 #include "weekviewcell.h"
 #include <QPainter>
 #include <QMouseEvent>
@@ -8,7 +8,7 @@
 WeekViewCell::WeekViewCell(const QDate& date, QWidget* parent)
     : QWidget(parent)
     , m_date(date)
-    , m_status(CustomCalendarWidget::NoWorkout)
+    , m_status(WorkoutStatus::NoWorkout)
 {
     setMinimumSize(150, 120);
     setMaximumSize(300, 200);
@@ -23,7 +23,7 @@ WeekViewCell::WeekViewCell(const QDate& date, QWidget* parent)
 void WeekViewCell::setWorkoutData(const QString& name, 
                                const QString& description,
                                const QVector<Exercise>& exercises,
-                               CustomCalendarWidget::WorkoutStatus status)
+                               WorkoutStatus status)
 {
     m_workoutName = name;
     m_workoutDescription = description;
@@ -37,7 +37,7 @@ void WeekViewCell::clear()
     m_workoutName.clear();
     m_workoutDescription.clear();
     m_exercises.clear();
-    m_status = CustomCalendarWidget::NoWorkout;
+    m_status = WorkoutStatus::NoWorkout;
     update();
 }
 
@@ -47,10 +47,9 @@ void WeekViewCell::paintEvent(QPaintEvent* event)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    // Draw border and background
     QRect rect = this->rect().adjusted(1, 1, -1, -1);
     
-    // Set background color based on status
+    // Draw background with status color
     painter.fillRect(rect, getStatusColor());
     
     // Draw border
@@ -58,13 +57,13 @@ void WeekViewCell::paintEvent(QPaintEvent* event)
     painter.setPen(isSelected ? QPen(Qt::blue, 2) : QPen(Qt::lightGray, 1));
     painter.drawRect(rect);
 
-    // Setup text color based on status
+    // Set text color based on status
     bool isWeekend = m_date.dayOfWeek() > 5;
     QColor textColor;
     
-    if (m_status == CustomCalendarWidget::NoWorkout) {
+    if (m_status == WorkoutStatus::NoWorkout) {
         textColor = isWeekend ? QColor(244, 67, 54) : Qt::white;
-    } else if (m_status == CustomCalendarWidget::Missed) {
+    } else if (m_status == WorkoutStatus::Missed) {
         textColor = Qt::white;
     } else {
         textColor = Qt::black;
@@ -76,30 +75,21 @@ void WeekViewCell::paintEvent(QPaintEvent* event)
     dateFont.setBold(true);
     dateFont.setPointSize(12);
     painter.setFont(dateFont);
-    
-    QString dateText = QString::number(m_date.day());
-    if (isWeekend) {
-        painter.setPen(QColor(244, 67, 54));
-    }
-    painter.drawText(QRect(8, 8, 30, 25), 
-                    Qt::AlignLeft | Qt::AlignVCenter,
-                    dateText);
+    painter.drawText(QRect(8, 8, 30, 25), Qt::AlignLeft | Qt::AlignVCenter,
+                    QString::number(m_date.day()));
 
     // Draw workout info if exists
     if (!m_workoutName.isEmpty()) {
         QRect contentRect = rect.adjusted(8, 35, -8, -8);
         
-        // Draw workout name
-        QFont nameFont = painter.font();
+        QFont nameFont = dateFont;
         nameFont.setPointSize(10);
         painter.setFont(nameFont);
-        painter.setPen(textColor);
         
         QFontMetrics fm(nameFont);
         QString elidedName = fm.elidedText(m_workoutName, Qt::ElideRight, contentRect.width());
         painter.drawText(contentRect, Qt::AlignTop | Qt::AlignLeft, elidedName);
 
-        // Draw exercise count
         QFont normalFont = painter.font();
         normalFont.setBold(false);
         normalFont.setPointSize(9);
@@ -115,11 +105,11 @@ void WeekViewCell::paintEvent(QPaintEvent* event)
 QColor WeekViewCell::getStatusColor() const
 {
     switch (m_status) {
-        case CustomCalendarWidget::Completed:
+        case WorkoutStatus::Completed:
             return QColor(76, 175, 80);    // Green
-        case CustomCalendarWidget::Missed:
+        case WorkoutStatus::Missed:
             return QColor(244, 67, 54);    // Red
-        case CustomCalendarWidget::RestDay:
+        case WorkoutStatus::RestDay:
             return QColor(158, 158, 158);  // Grey
         default:
             return QColor(45, 45, 45);     // Dark background

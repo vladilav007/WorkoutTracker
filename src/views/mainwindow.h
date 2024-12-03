@@ -1,4 +1,4 @@
-// src/views/mainwindow.h
+// mainwindow.h
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
@@ -8,6 +8,7 @@
 #include <QAction>
 #include <QLabel>
 #include "../models/types.h"
+#include "../models/workout_status.h"
 #include "customcalendarwidget.h"
 #include "workoutdialog.h"
 #include "weekview.h"
@@ -26,6 +27,7 @@ private slots:
     void switchToMonthView();
     void switchToWeekView();
     void handleDayClicked(const QDate &date);
+    void handleCalendarStatusChanged(const QDate& date, WorkoutStatus status);
 
 private:
     void setupUI();
@@ -34,8 +36,9 @@ private:
     void showWorkoutDialog(const QDate &date, bool readOnly);
     void setupWeekView();
     void updateViewVisibility();
-    void loadWorkoutData();    // New method
-    void reloadWorkoutData();  // New method
+    void loadWorkoutData();
+    // Просто удалим reloadWorkoutData(), так как его функционал 
+    // уже покрывается методом loadWorkoutData()
 
     QWidget *centralWidget;
     QVBoxLayout *mainLayout;

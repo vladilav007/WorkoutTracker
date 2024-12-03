@@ -8,9 +8,11 @@
 #include <QMap>
 #include <QDate>
 #include <QMenu>
-#include "weekviewcell.h"
+#include <QTimer>
 #include "../models/types.h"
+#include "../models/workout_status.h"
 #include "../models/storage_manager.h"
+#include "weekviewcell.h"
 
 class WeekView : public QWidget {
     Q_OBJECT
@@ -24,12 +26,13 @@ public:
 
 signals:
     void dayClicked(const QDate& date);
+    void statusChanged(const QDate& date, WorkoutStatus status);
 
 private slots:
     void updateView();
     void handleCellClicked(const QDate& date);
     void handleCellContextMenu(const QDate& date, const QPoint& globalPos);
-    void updateCellStatus(const QDate& date, CustomCalendarWidget::WorkoutStatus status);  // Added this
+    void updateCellStatus(const QDate& date, WorkoutStatus status);
 
 private:
     QDate m_currentDate;

@@ -4,8 +4,8 @@
 
 #include <QWidget>
 #include <QDate>
-#include "customcalendarwidget.h"
 #include "../models/types.h"
+#include "../models/workout_status.h"
 
 class WeekViewCell : public QWidget {
     Q_OBJECT
@@ -15,14 +15,14 @@ public:
     void setWorkoutData(const QString& name, 
                        const QString& description,
                        const QVector<Exercise>& exercises,
-                       CustomCalendarWidget::WorkoutStatus status);
+                       WorkoutStatus status);
     void clear();
     
     // Getters
     QString workoutName() const { return m_workoutName; }
     QString workoutDescription() const { return m_workoutDescription; }
     QVector<Exercise> workoutExercises() const { return m_exercises; }
-    CustomCalendarWidget::WorkoutStatus workoutStatus() const { return m_status; }
+    WorkoutStatus workoutStatus() const { return m_status; }
 
 signals:
     void clicked(const QDate& date);
@@ -38,7 +38,7 @@ private:
     QString m_workoutName;
     QString m_workoutDescription;
     QVector<Exercise> m_exercises;
-    CustomCalendarWidget::WorkoutStatus m_status;
+    WorkoutStatus m_status;
     QColor getStatusColor() const;
 };
 
