@@ -29,7 +29,12 @@ void WeekViewCell::setWorkoutData(const QString& name,
     m_workoutDescription = description;
     m_exercises = exercises;
     m_status = status;
-    update();
+    update();  // Force immediate update
+    
+    // If status changed, force parent update too
+    if (parentWidget()) {
+        parentWidget()->update();
+    }
 }
 
 void WeekViewCell::clear()
@@ -47,10 +52,24 @@ void WeekViewCell::paintEvent(QPaintEvent* event)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    QRect rect = this->rect().adjusted(1, 1, -1, -1);
-    
+    QRect rect = this->rect().adjusted(2, 2, -2, -2);
+    if (m_isSelected) {
+    painter.setPen(QPen(Qt::blue, 2));
+    } else {
+        painter.setPen(QPen(Qt::lightGray, 1));
+    }
+    painter.drawRect(rect);
     // Draw background with status color
     painter.fillRect(rect, getStatusColor());
+    
+    // Draw selection border if selected
+    if (m_isSelected) {
+        painter.setPen(QPen(Qt::blue, 2));
+        painter.drawRect(rect.adjusted(0, 0, -1, -1));
+    } else {
+        painter.setPen(QPen(Qt::lightGray, 1));
+        painter.drawRect(rect);
+    }
     
     // Draw border
     bool isSelected = m_date == QDate::currentDate();
@@ -59,46 +78,39 @@ void WeekViewCell::paintEvent(QPaintEvent* event)
 
     // Set text color based on status
     bool isWeekend = m_date.dayOfWeek() > 5;
-    QColor textColor;
+    QColor textColor = isWeekend ? QColor(244, 67, 54) : Qt::white;
     
-    if (m_status == WorkoutStatus::NoWorkout) {
-        textColor = isWeekend ? QColor(244, 67, 54) : Qt::white;
-    } else if (m_status == WorkoutStatus::Missed) {
-        textColor = Qt::white;
-    } else {
-        textColor = Qt::black;
-    }
-    
-    // Draw date
+    // Draw date in top-left corner with larger font
     painter.setPen(textColor);
     QFont dateFont = painter.font();
     dateFont.setBold(true);
-    dateFont.setPointSize(12);
+    dateFont.setPointSize(14);
     painter.setFont(dateFont);
-    painter.drawText(QRect(8, 8, 30, 25), Qt::AlignLeft | Qt::AlignVCenter,
+    painter.drawText(QRect(10, 10, rect.width() - 20, 30), 
+                    Qt::AlignLeft | Qt::AlignVCenter,
                     QString::number(m_date.day()));
 
     // Draw workout info if exists
     if (!m_workoutName.isEmpty()) {
-        QRect contentRect = rect.adjusted(8, 35, -8, -8);
-        
-        QFont nameFont = dateFont;
-        nameFont.setPointSize(10);
+        QFont nameFont = painter.font();
+        nameFont.setPointSize(12);
+        nameFont.setBold(true);
         painter.setFont(nameFont);
         
-        QFontMetrics fm(nameFont);
-        QString elidedName = fm.elidedText(m_workoutName, Qt::ElideRight, contentRect.width());
-        painter.drawText(contentRect, Qt::AlignTop | Qt::AlignLeft, elidedName);
-
-        QFont normalFont = painter.font();
-        normalFont.setBold(false);
-        normalFont.setPointSize(9);
-        painter.setFont(normalFont);
+        // Draw workout name
+        QRect nameRect = rect.adjusted(10, 40, -10, -rect.height()/2);
+        painter.drawText(nameRect, Qt::AlignLeft | Qt::TextWordWrap, m_workoutName);
         
-        QString exerciseInfo = QString("%1 exercises").arg(m_exercises.size());
-        painter.drawText(contentRect.adjusted(0, fm.height() + 5, 0, 0),
-                        Qt::AlignTop | Qt::AlignLeft,
-                        exerciseInfo);
+        // Draw exercise count
+        QFont exerciseFont = painter.font();
+        exerciseFont.setPointSize(10);
+        exerciseFont.setBold(false);
+        painter.setFont(exerciseFont);
+        
+        QRect exerciseRect = rect.adjusted(10, rect.height()/2, -10, -10);
+        painter.drawText(exerciseRect, 
+                        Qt::AlignLeft | Qt::AlignTop,
+                        tr("%1 exercises").arg(m_exercises.size()));
     }
 }
 
@@ -130,4 +142,10 @@ void WeekViewCell::contextMenuEvent(QContextMenuEvent* event)
 {
     emit contextMenuRequested(m_date, event->globalPos());
     event->accept();
+}
+
+void WeekViewCell::setSelected(bool selected)
+{
+    m_isSelected = selected;
+    update();
 }

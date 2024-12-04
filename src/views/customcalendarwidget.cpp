@@ -36,10 +36,18 @@ CustomCalendarWidget::CustomCalendarWidget(QWidget *parent)
 
 void CustomCalendarWidget::setDayStatus(const QDate &date, WorkoutStatus status)
 {
+    // Prevent recursive updates
+    static bool updatingStatus = false;
+    if (updatingStatus) return;
+    
+    updatingStatus = true;
+    
     dayStatusMap[date] = status;
     workoutMap[date] = true;
     updateCell(date);
     emit statusChanged(date, status);
+    
+    updatingStatus = false;
 }
 
 WorkoutStatus CustomCalendarWidget::getDayStatus(const QDate &date) const
@@ -96,6 +104,7 @@ void CustomCalendarWidget::contextMenuEvent(QContextMenuEvent *event)
     createContextMenu(date, event->globalPos());
 }
 
+// customcalendarwidget.cpp
 void CustomCalendarWidget::createContextMenu(const QDate &date, const QPoint &pos)
 {
     QMenu menu(this);
@@ -108,21 +117,25 @@ void CustomCalendarWidget::createContextMenu(const QDate &date, const QPoint &po
     connect(completedAction, &QAction::triggered, this, [this, date]() {
         setDayStatus(date, WorkoutStatus::Completed);
         emit statusChanged(date, WorkoutStatus::Completed);
+        StorageManager::instance().saveToFile();  // Add explicit save
     });
     
     connect(missedAction, &QAction::triggered, this, [this, date]() {
         setDayStatus(date, WorkoutStatus::Missed);
         emit statusChanged(date, WorkoutStatus::Missed);
+        StorageManager::instance().saveToFile();  // Add explicit save
     });
     
     connect(plannedAction, &QAction::triggered, this, [this, date]() {
         setDayStatus(date, WorkoutStatus::NoWorkout);
         emit statusChanged(date, WorkoutStatus::NoWorkout);
+        StorageManager::instance().saveToFile();  // Add explicit save
     });
     
     connect(restAction, &QAction::triggered, this, [this, date]() {
         setDayStatus(date, WorkoutStatus::RestDay);
         emit statusChanged(date, WorkoutStatus::RestDay);
+        StorageManager::instance().saveToFile();  // Add explicit save
     });
     
     menu.exec(pos);

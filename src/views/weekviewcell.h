@@ -17,6 +17,9 @@ public:
                        const QVector<Exercise>& exercises,
                        WorkoutStatus status);
     void clear();
+
+    void setSelected(bool selected);
+    bool isSelected() const { return m_isSelected; }
     
     // Getters
     QString workoutName() const { return m_workoutName; }
@@ -40,6 +43,7 @@ private:
     QVector<Exercise> m_exercises;
     WorkoutStatus m_status;
     QColor getStatusColor() const;
+    bool m_isSelected = false;
 };
 
 #endif // WEEKVIEWCELL_H

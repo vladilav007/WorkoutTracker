@@ -8,22 +8,24 @@
 WeekView::WeekView(QWidget* parent)
     : QWidget(parent)
     , m_currentDate(QDate::currentDate())
+    , m_selectedDate(QDate::currentDate())  // Initialize selected date
 {
     m_gridLayout = new QGridLayout(this);
     m_gridLayout->setSpacing(1);
     m_gridLayout->setContentsMargins(1, 1, 1, 1);
 
+    setupNavigation();
     createHeaderLabels();
     createWeekCells();
     
-    QTimer::singleShot(0, this, &WeekView::loadWorkoutData);
-    
     // Connect signals for cells
     for (auto cell : m_cells) {
-        connect(cell, &WeekViewCell::clicked,
-                this, &WeekView::handleCellClicked);
-        connect(cell, &WeekViewCell::contextMenuRequested,
-                this, &WeekView::handleCellContextMenu);
+        if (cell) {  // Add null check
+            connect(cell, &WeekViewCell::clicked,
+                    this, &WeekView::handleCellClicked);
+            connect(cell, &WeekViewCell::contextMenuRequested,
+                    this, &WeekView::handleCellContextMenu);
+        }
     }
 }
 
@@ -107,24 +109,25 @@ void WeekView::updateView()
 }
 
 void WeekView::handleCellClicked(const QDate& date)
-{
+{   
+    setSelectedDate(date); 
     emit dayClicked(date);
 }
 
 void WeekView::updateCell(const QDate& date)
 {
-    if (auto it = m_cells.find(date); it != m_cells.end()) {
+    if (auto cell = m_cells.value(date)) {
         QString name, description;
         QVector<Exercise> exercises;
         WorkoutStatus status;
         
         if (StorageManager::instance().loadWorkout(date, name, description, exercises, status)) {
-            it.value()->setWorkoutData(name, description, exercises, status);
-            it.value()->update();
+            cell->setWorkoutData(name, description, exercises, status);
         } else {
-            it.value()->setWorkoutData("", "", QVector<Exercise>(), WorkoutStatus::NoWorkout);
-            it.value()->update();
+            cell->setWorkoutData("", "", QVector<Exercise>(), WorkoutStatus::NoWorkout);
         }
+        
+        cell->update();
     }
 }
 
@@ -143,13 +146,17 @@ void WeekView::updateCellStatus(const QDate& date, WorkoutStatus status)
         QString description = cell->workoutDescription();
         QVector<Exercise> exercises = cell->workoutExercises();
         
+        // Update storage first
         StorageManager::instance().saveWorkout(date, name, description, exercises, status);
         
         // Then update the cell
         cell->setWorkoutData(name, description, exercises, status);
         cell->update();
         
-        // Emit signal about status change
+        // Force immediate save
+        StorageManager::instance().saveToFile();
+        
+        // Emit signal for sync
         emit statusChanged(date, status);
     }
 }
@@ -163,26 +170,138 @@ void WeekView::handleCellContextMenu(const QDate& date, const QPoint& globalPos)
     QAction* plannedAction = menu.addAction(tr("Mark as Planned"));
     QAction* restAction = menu.addAction(tr("Mark as Rest Day"));
     
+    // Adding copy/paste options
+    menu.addSeparator();
+    QAction* copyAction = menu.addAction(tr("Copy Workout"));
+    QAction* pasteAction = menu.addAction(tr("Paste Workout"));
+    pasteAction->setEnabled(!copiedWorkout.isNull());
+    
     connect(completedAction, &QAction::triggered, [this, date]() {
-        // Use updateCellStatus which will also emit the signal
         updateCellStatus(date, WorkoutStatus::Completed);
-        emit statusChanged(date, WorkoutStatus::Completed);
+        StorageManager::instance().saveToFile();  // Add explicit save
     });
     
     connect(missedAction, &QAction::triggered, [this, date]() {
         updateCellStatus(date, WorkoutStatus::Missed);
-        emit statusChanged(date, WorkoutStatus::Missed);
+        StorageManager::instance().saveToFile();  // Add explicit save
     });
     
     connect(plannedAction, &QAction::triggered, [this, date]() {
         updateCellStatus(date, WorkoutStatus::NoWorkout);
-        emit statusChanged(date, WorkoutStatus::NoWorkout);
+        StorageManager::instance().saveToFile();  // Add explicit save
     });
     
     connect(restAction, &QAction::triggered, [this, date]() {
         updateCellStatus(date, WorkoutStatus::RestDay);
-        emit statusChanged(date, WorkoutStatus::RestDay);
+        StorageManager::instance().saveToFile();  // Add explicit save
+    });
+    
+    connect(copyAction, &QAction::triggered, [this, date]() {
+        copyWorkout(date);
+    });
+    
+    connect(pasteAction, &QAction::triggered, [this, date]() {
+        pasteWorkout(date);
+        StorageManager::instance().saveToFile();  // Add explicit save
     });
     
     menu.exec(globalPos);
+}
+
+void WeekView::setupNavigation()
+{
+    auto navigationLayout = new QHBoxLayout;
+    
+    prevWeekButton = new QPushButton("<", this);
+    nextWeekButton = new QPushButton(">", this);
+    weekLabel = new QLabel(this);
+    weekLabel->setAlignment(Qt::AlignCenter);
+    
+    navigationLayout->addWidget(prevWeekButton);
+    navigationLayout->addWidget(weekLabel);
+    navigationLayout->addWidget(nextWeekButton);
+    
+    connect(prevWeekButton, &QPushButton::clicked, this, &WeekView::prevWeek);
+    connect(nextWeekButton, &QPushButton::clicked, this, &WeekView::nextWeek);
+    
+    // Добавляем навигацию в основной layout перед сеткой
+    m_gridLayout->addLayout(navigationLayout, 0, 0, 1, 7);
+    
+    // Сдвигаем заголовки дней недели
+    createHeaderLabels(); // Перемещаем заголовки на строку ниже
+    
+    updateWeekLabel();
+}
+
+void WeekView::prevWeek()
+{
+    setCurrentDate(m_currentDate.addDays(-7));
+}
+
+void WeekView::nextWeek()
+{
+    setCurrentDate(m_currentDate.addDays(7));
+}
+
+void WeekView::updateWeekLabel()
+{
+    QDate weekStart = getWeekStart(m_currentDate);
+    QDate weekEnd = weekStart.addDays(6);
+    weekLabel->setText(tr("Week: %1 - %2")
+                      .arg(weekStart.toString("dd.MM"))
+                      .arg(weekEnd.toString("dd.MM.yyyy")));
+}
+
+void WeekView::copyWorkout(const QDate& date)
+{
+    QString name, description;
+    QVector<Exercise> exercises;
+    WorkoutStatus status;
+    
+    if (StorageManager::instance().loadWorkout(date, name, description, exercises, status)) {
+        copiedWorkout.name = name;
+        copiedWorkout.description = description;
+        copiedWorkout.exercises = exercises;
+    }
+}
+
+void WeekView::pasteWorkout(const QDate& date)
+{
+    if (!copiedWorkout.isNull()) {
+        StorageManager::instance().saveWorkout(
+            date, 
+            copiedWorkout.name,
+            copiedWorkout.description,
+            copiedWorkout.exercises,
+            WorkoutStatus::NoWorkout
+        );
+        
+        updateCell(date);
+        emit workoutModified(date);
+    }
+}
+
+void WeekView::setSelectedDate(const QDate& date)
+{
+    if (auto oldCell = m_cells.value(m_selectedDate)) {
+        oldCell->setSelected(false);
+    }
+    
+    m_selectedDate = date;
+    
+    if (auto newCell = m_cells.value(m_selectedDate)) {
+        newCell->setSelected(true);
+    }
+    
+    update();
+}
+
+QDate WeekView::selectedDate() const
+{
+    return m_selectedDate;
+}
+
+WeekViewCell* WeekView::getCell(const QDate& date)
+{
+    return m_cells.value(date);
 }

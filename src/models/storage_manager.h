@@ -15,14 +15,14 @@ class StorageManager {
 public:
     static StorageManager& instance();
     
-    bool saveWorkout(const QDate& date, 
-                    const QString& name, 
-                    const QString& description, 
+    bool saveWorkout(const QDate& date,
+                    const QString& name,
+                    const QString& description,
                     const QVector<Exercise>& exercises,
                     WorkoutStatus status);
-    
-    bool loadWorkout(const QDate& date, 
-                    QString& name, 
+                    
+    bool loadWorkout(const QDate& date,
+                    QString& name,
                     QString& description,
                     QVector<Exercise>& exercises,
                     WorkoutStatus& status);
@@ -51,6 +51,9 @@ private:
     QString getWorkoutFilePath();
     QJsonObject workoutToJson(const WorkoutData& workout) const;
     WorkoutData workoutFromJson(const QJsonObject& json) const;
+
+    bool needsSaving = false;
+    bool isSaving = false;
 };
 
 #endif // STORAGE_MANAGER_H

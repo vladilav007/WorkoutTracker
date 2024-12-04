@@ -7,6 +7,7 @@
 #include <QToolBar>
 #include <QAction>
 #include <QLabel>
+#include <QTimer>
 #include "../models/types.h"
 #include "../models/workout_status.h"
 #include "customcalendarwidget.h"
@@ -28,6 +29,9 @@ private slots:
     void switchToWeekView();
     void handleDayClicked(const QDate &date);
     void handleCalendarStatusChanged(const QDate& date, WorkoutStatus status);
+
+signals:
+    void workoutDataLoaded();
 
 private:
     void setupUI();
