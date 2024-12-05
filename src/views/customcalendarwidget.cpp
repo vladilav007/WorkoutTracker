@@ -230,24 +230,22 @@ void CustomCalendarWidget::loadSavedData()
         WorkoutStatus status;
         
         if (storage.loadWorkout(date, name, description, exercises, status)) {
-            // Устанавливаем статус
+            // Устанавливаем данные
             dayStatusMap[date] = status;
-            
-            // Устанавливаем индикатор тренировки
             workoutMap[date] = true;
             
-            // Сохраняем данные тренировки
             WorkoutInfo info;
             info.name = name;
             info.description = description;
             info.exercises = exercises;
             workoutData[date] = info;
             
-            // Принудительно обновляем ячейку
+            // Обновляем ячейку
             updateCell(date);
         }
     }
     
-    // Принудительно перерисовываем весь календарь
+    // Принудительное обновление
     update();
+    repaint();  // Добавляем для гарантированного обновления
 }

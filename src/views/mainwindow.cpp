@@ -54,26 +54,23 @@ void MainWindow::setupUI()
     
     setupWeekView();
     
+    // Connect signals
     connect(calendar, &QCalendarWidget::clicked,
             this, &MainWindow::handleDayClicked);
-            
     connect(calendar, &CustomCalendarWidget::statusChanged,
             this, &MainWindow::handleCalendarStatusChanged);
-            
     connect(weekView, &WeekView::dayClicked,
             this, &MainWindow::handleDayClicked);
-            
-    connect(weekView, &WeekView::statusChanged,
-            [this](const QDate& date, WorkoutStatus status) {
-                if (calendar) {
-                    calendar->setDayStatus(date, status);
-                }
-            });
+    
+    // Важно: сначала загрузить данные, потом обновить UI
+    StorageManager::instance().loadFromFile();
+    calendar->loadSavedData();
+    calendar->update();
     
     updateViewVisibility();
     
-    calendar->loadSavedData();
-    calendar->update();
+    // Обновляем информацию о текущем дне
+    handleDayClicked(calendar->selectedDate());
 }
 
 void MainWindow::setupWeekView()
@@ -191,14 +188,38 @@ void MainWindow::switchToMonthView()
     if (!isMonthViewActive && !isUpdating) {
         isUpdating = true;
         
-        QDate currentDate = calendar->selectedDate();
+        // Получаем текущую дату из недельного вида и проверяем её валидность
+        QDate selectedDate = weekView->selectedDate();
+        if (!selectedDate.isValid()) {
+            selectedDate = QDate::currentDate();
+        }
+        
+        qDebug() << "Switching to month view with date:" << selectedDate.toString(Qt::ISODate);
+        
         isMonthViewActive = true;
+        
+        // Обновляем данные календаря
+        QVector<QDate> dates = StorageManager::instance().getAllWorkoutDates();
+        for (const QDate& date : dates) {
+            QString name, description;
+            QVector<Exercise> exercises;
+            WorkoutStatus status;
+            
+            if (StorageManager::instance().loadWorkout(date, name, description, exercises, status)) {
+                calendar->setWorkoutData(date, name, description, exercises);
+                calendar->setDayStatus(date, status);
+            }
+        }
         
         calendar->setVisible(true);
         weekView->setVisible(false);
         
-        calendar->loadSavedData();
-        calendar->setSelectedDate(currentDate);
+        // Устанавливаем правильную дату в календаре
+        calendar->setCurrentPage(selectedDate.year(), selectedDate.month());
+        calendar->setSelectedDate(selectedDate);
+        calendar->update();
+        
+        handleDayClicked(selectedDate);
         
         isUpdating = false;
     }
@@ -209,14 +230,16 @@ void MainWindow::switchToWeekView()
     if (isMonthViewActive && !isUpdating) {
         isUpdating = true;
         
-        QDate currentDate = calendar->selectedDate();
+        QDate selectedDate = calendar->selectedDate();
         isMonthViewActive = false;
         
         calendar->setVisible(false);
         weekView->setVisible(true);
         
-        weekView->setCurrentDate(currentDate);
+        weekView->setCurrentDate(selectedDate);
+        weekView->setSelectedDate(selectedDate);
         weekView->loadWorkoutData();
+        handleDayClicked(selectedDate);
         
         isUpdating = false;
     }
@@ -225,11 +248,14 @@ void MainWindow::switchToWeekView()
 
 void MainWindow::updateViewVisibility()
 {
-    QDate currentDate = QDate::currentDate();
-    if (isMonthViewActive && weekView) {
-        currentDate = weekView->selectedDate();
-    } else if (!isMonthViewActive && calendar) {
+    if (isUpdating) return;
+    isUpdating = true;
+    
+    QDate currentDate;
+    if (isMonthViewActive) {
         currentDate = calendar->selectedDate();
+    } else {
+        currentDate = weekView->selectedDate();
     }
     
     calendar->setVisible(isMonthViewActive);
@@ -245,6 +271,7 @@ void MainWindow::updateViewVisibility()
     }
     
     handleDayClicked(currentDate);
+    isUpdating = false;
 }
 
 void MainWindow::handleDayClicked(const QDate &date)
@@ -253,10 +280,16 @@ void MainWindow::handleDayClicked(const QDate &date)
     
     isUpdating = true;
     
+    // Обновляем выделение в обоих видах
+    if (isMonthViewActive) {
+        calendar->setSelectedDate(date);
+    } else {
+        weekView->setSelectedDate(date);
+    }
+    
     QString name, description;
     QVector<Exercise> exercises;
     WorkoutStatus status;
-    
     QString statusText = QString("Selected: %1").arg(date.toString("dd.MM.yyyy"));
     
     if (StorageManager::instance().loadWorkout(date, name, description, exercises, status)) {
@@ -335,13 +368,15 @@ void MainWindow::showWorkoutDialog(const QDate &date, bool readOnly)
         status = hasExistingWorkout ? status : WorkoutStatus::NoWorkout;
         
         StorageManager::instance().saveWorkout(date, name, description, exercises, status);
-        StorageManager::instance().saveToFile();  // Add explicit save
+        StorageManager::instance().saveToFile();
         
         calendar->setWorkoutData(date, name, description, exercises);
         calendar->setDayStatus(date, status);
         
         if (!isMonthViewActive) {
             weekView->updateCell(date);
+            weekView->setSelectedDate(date);  // Обновляем выбранную дату
+            weekView->setCurrentDate(date);   // и текущую дату
         }
         
         handleDayClicked(date);
@@ -349,3 +384,4 @@ void MainWindow::showWorkoutDialog(const QDate &date, bool readOnly)
     
     delete dialog;
 }
+

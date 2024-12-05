@@ -110,7 +110,8 @@ void WeekView::updateView()
 
 void WeekView::handleCellClicked(const QDate& date)
 {   
-    setSelectedDate(date); 
+    setSelectedDate(date);
+    setCurrentDate(date);
     emit dayClicked(date);
 }
 
