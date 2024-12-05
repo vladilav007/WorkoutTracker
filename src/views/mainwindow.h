@@ -57,6 +57,7 @@ private:
     QAction *weekViewAction;
     
     bool isMonthViewActive;
+    bool isUpdating = false;
 };
 
 #endif // MAINWINDOW_H

@@ -79,16 +79,19 @@ QString StorageManager::getWorkoutFilePath()
 
 bool StorageManager::saveToFile(const QString& filename)
 {
-    if (isSaving || !needsSaving) return true;
-    
-    isSaving = true;
     QString filePath = filename.isEmpty() ? getWorkoutFilePath() : filename;
     qDebug() << "Saving workouts to:" << filePath;
+    
+    // Ensure directory exists
+    QFileInfo fileInfo(filePath);
+    QDir dir = fileInfo.dir();
+    if (!dir.exists()) {
+        dir.mkpath(".");
+    }
     
     QFile file(filePath);
     if (!file.open(QIODevice::WriteOnly)) {
         qWarning() << "Could not open file for writing:" << filePath;
-        isSaving = false;
         return false;
     }
     
@@ -102,13 +105,13 @@ bool StorageManager::saveToFile(const QString& filename)
     }
     
     root["workouts"] = workoutsArray;
-    root["version"] = "1.0";
     
     QJsonDocument doc(root);
-    file.write(doc.toJson(QJsonDocument::Indented));
+    if (file.write(doc.toJson()) == -1) {
+        qWarning() << "Failed to write data to file:" << filePath;
+        return false;
+    }
     
-    needsSaving = false;
-    isSaving = false;
     return true;
 }
 
@@ -134,28 +137,14 @@ bool StorageManager::saveWorkout(const QDate& date,
                                const QVector<Exercise>& exercises,
                                WorkoutStatus status)
 {
-    static bool isSaving = false;
-    if (isSaving) return false;
+    WorkoutData workout;
+    workout.name = name;
+    workout.description = description;
+    workout.exercises = exercises;
+    workout.status = status;
     
-    isSaving = true;
-    
-    try {
-        WorkoutData workout;
-        workout.name = name;
-        workout.description = description;
-        workout.exercises = exercises;
-        workout.status = status;
-        
-        workouts[date] = workout;
-        saveToFile();  // Save immediately
-        
-        isSaving = false;
-        return true;
-    } catch (...) {
-        isSaving = false;
-        qWarning() << "Exception during save workout";
-        return false;
-    }
+    workouts[date] = workout;
+    return saveToFile();
 }
 
 bool StorageManager::loadWorkout(const QDate& date,

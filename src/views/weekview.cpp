@@ -116,17 +116,13 @@ void WeekView::handleCellClicked(const QDate& date)
 
 void WeekView::updateCell(const QDate& date)
 {
-    if (auto cell = m_cells.value(date)) {
+    if (WeekViewCell* cell = m_cells.value(date)) {
         QString name, description;
         QVector<Exercise> exercises;
         WorkoutStatus status;
         
-        if (StorageManager::instance().loadWorkout(date, name, description, exercises, status)) {
-            cell->setWorkoutData(name, description, exercises, status);
-        } else {
-            cell->setWorkoutData("", "", QVector<Exercise>(), WorkoutStatus::NoWorkout);
-        }
-        
+        StorageManager::instance().loadWorkout(date, name, description, exercises, status);
+        cell->setWorkoutData(name, description, exercises, status);
         cell->update();
     }
 }
@@ -146,17 +142,15 @@ void WeekView::updateCellStatus(const QDate& date, WorkoutStatus status)
         QString description = cell->workoutDescription();
         QVector<Exercise> exercises = cell->workoutExercises();
         
-        // Update storage first
+        // Сначала обновляем в хранилище
         StorageManager::instance().saveWorkout(date, name, description, exercises, status);
+        StorageManager::instance().saveToFile();  // Явно сохраняем
         
-        // Then update the cell
+        // Затем обновляем ячейку
         cell->setWorkoutData(name, description, exercises, status);
         cell->update();
         
-        // Force immediate save
-        StorageManager::instance().saveToFile();
-        
-        // Emit signal for sync
+        // Испускаем сигнал для синхронизации
         emit statusChanged(date, status);
     }
 }
@@ -170,39 +164,20 @@ void WeekView::handleCellContextMenu(const QDate& date, const QPoint& globalPos)
     QAction* plannedAction = menu.addAction(tr("Mark as Planned"));
     QAction* restAction = menu.addAction(tr("Mark as Rest Day"));
     
-    // Adding copy/paste options
-    menu.addSeparator();
-    QAction* copyAction = menu.addAction(tr("Copy Workout"));
-    QAction* pasteAction = menu.addAction(tr("Paste Workout"));
-    pasteAction->setEnabled(!copiedWorkout.isNull());
-    
-    connect(completedAction, &QAction::triggered, [this, date]() {
+    connect(completedAction, &QAction::triggered, this, [this, date]() {
         updateCellStatus(date, WorkoutStatus::Completed);
-        StorageManager::instance().saveToFile();  // Add explicit save
     });
     
-    connect(missedAction, &QAction::triggered, [this, date]() {
+    connect(missedAction, &QAction::triggered, this, [this, date]() {
         updateCellStatus(date, WorkoutStatus::Missed);
-        StorageManager::instance().saveToFile();  // Add explicit save
     });
     
-    connect(plannedAction, &QAction::triggered, [this, date]() {
+    connect(plannedAction, &QAction::triggered, this, [this, date]() {
         updateCellStatus(date, WorkoutStatus::NoWorkout);
-        StorageManager::instance().saveToFile();  // Add explicit save
     });
     
-    connect(restAction, &QAction::triggered, [this, date]() {
+    connect(restAction, &QAction::triggered, this, [this, date]() {
         updateCellStatus(date, WorkoutStatus::RestDay);
-        StorageManager::instance().saveToFile();  // Add explicit save
-    });
-    
-    connect(copyAction, &QAction::triggered, [this, date]() {
-        copyWorkout(date);
-    });
-    
-    connect(pasteAction, &QAction::triggered, [this, date]() {
-        pasteWorkout(date);
-        StorageManager::instance().saveToFile();  // Add explicit save
     });
     
     menu.exec(globalPos);

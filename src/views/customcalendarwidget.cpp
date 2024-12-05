@@ -219,28 +219,35 @@ void CustomCalendarWidget::loadSavedData()
     StorageManager& storage = StorageManager::instance();
     QVector<QDate> dates = storage.getAllWorkoutDates();
     
+    // Очищаем текущие данные
+    dayStatusMap.clear();
+    workoutMap.clear();
+    workoutData.clear();
+    
     for (const QDate& date : dates) {
         QString name, description;
         QVector<Exercise> exercises;
         WorkoutStatus status;
         
         if (storage.loadWorkout(date, name, description, exercises, status)) {
-            // Устанавливаем данные тренировки
-            setWorkoutData(date, name, description, exercises);
-            
             // Устанавливаем статус
-            setDayStatus(date, status);
+            dayStatusMap[date] = status;
             
-            // Обновляем ячейку
+            // Устанавливаем индикатор тренировки
+            workoutMap[date] = true;
+            
+            // Сохраняем данные тренировки
+            WorkoutInfo info;
+            info.name = name;
+            info.description = description;
+            info.exercises = exercises;
+            workoutData[date] = info;
+            
+            // Принудительно обновляем ячейку
             updateCell(date);
         }
     }
     
-    // Принудительное обновление всего виджета
+    // Принудительно перерисовываем весь календарь
     update();
-    
-    // Испускаем сигнал об изменении для каждой даты
-    for (const QDate& date : dates) {
-        emit statusChanged(date, dayStatusMap.value(date, WorkoutStatus::NoWorkout));
-    }
 }
