@@ -62,16 +62,19 @@ void MainWindow::setupUI()
     connect(weekView, &WeekView::dayClicked,
             this, &MainWindow::handleDayClicked);
     
-    if (!StorageManager::instance().loadFromFile()) {
-        qWarning() << "Failed to load workout data!";
-    }
+    StorageManager::instance().loadFromFile();
     
+    // Force data load for both views
     calendar->loadSavedData();
+    weekView->loadWorkoutData();
     
     calendar->update();
+    weekView->update();
     
     updateViewVisibility();
     
+    // Reset status label style and update current day info
+    statusLabel->setStyleSheet("QLabel { color: white; padding: 5px; }");
     handleDayClicked(QDate::currentDate());
 }
 
@@ -282,7 +285,6 @@ void MainWindow::handleDayClicked(const QDate &date)
     
     isUpdating = true;
     
-    // Обновляем выделение в обоих видах
     if (isMonthViewActive) {
         calendar->setSelectedDate(date);
     } else {
@@ -293,6 +295,9 @@ void MainWindow::handleDayClicked(const QDate &date)
     QVector<Exercise> exercises;
     WorkoutStatus status;
     QString statusText = QString("Selected: %1").arg(date.toString("dd.MM.yyyy"));
+    
+    // Reset status label style first
+    statusLabel->setStyleSheet("QLabel { color: white; padding: 5px; }");
     
     if (StorageManager::instance().loadWorkout(date, name, description, exercises, status)) {
         statusText += QString(" - Workout: %1 (%2 exercises)").arg(name).arg(exercises.size());
@@ -310,8 +315,6 @@ void MainWindow::handleDayClicked(const QDate &date)
                 statusText += " - Rest day";
                 statusLabel->setStyleSheet("QLabel { color: #9E9E9E; padding: 5px; }");
                 break;
-            default:
-                statusLabel->setStyleSheet("QLabel { color: white; padding: 5px; }");
         }
     }
     

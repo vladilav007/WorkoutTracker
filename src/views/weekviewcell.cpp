@@ -53,34 +53,23 @@ void WeekViewCell::paintEvent(QPaintEvent* event)
     painter.setRenderHint(QPainter::Antialiasing);
 
     QRect rect = this->rect().adjusted(2, 2, -2, -2);
-    if (m_isSelected) {
-    painter.setPen(QPen(Qt::blue, 2));
-    } else {
-        painter.setPen(QPen(Qt::lightGray, 1));
-    }
-    painter.drawRect(rect);
+    
     // Draw background with status color
     painter.fillRect(rect, getStatusColor());
     
-    // Draw selection border if selected
+    // Draw selection border
     if (m_isSelected) {
         painter.setPen(QPen(Qt::blue, 2));
-        painter.drawRect(rect.adjusted(0, 0, -1, -1));
+        painter.drawRect(rect);
     } else {
         painter.setPen(QPen(Qt::lightGray, 1));
         painter.drawRect(rect);
     }
     
-    // Draw border
-    bool isSelected = m_date == QDate::currentDate();
-    painter.setPen(isSelected ? QPen(Qt::blue, 2) : QPen(Qt::lightGray, 1));
-    painter.drawRect(rect);
-
-    // Set text color based on status
+    // Draw date
     bool isWeekend = m_date.dayOfWeek() > 5;
     QColor textColor = isWeekend ? QColor(244, 67, 54) : Qt::white;
     
-    // Draw date in top-left corner with larger font
     painter.setPen(textColor);
     QFont dateFont = painter.font();
     dateFont.setBold(true);
@@ -97,11 +86,9 @@ void WeekViewCell::paintEvent(QPaintEvent* event)
         nameFont.setBold(true);
         painter.setFont(nameFont);
         
-        // Draw workout name
         QRect nameRect = rect.adjusted(10, 40, -10, -rect.height()/2);
         painter.drawText(nameRect, Qt::AlignLeft | Qt::TextWordWrap, m_workoutName);
         
-        // Draw exercise count
         QFont exerciseFont = painter.font();
         exerciseFont.setPointSize(10);
         exerciseFont.setBold(false);

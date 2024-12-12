@@ -110,8 +110,20 @@ void WeekView::updateView()
 
 void WeekView::handleCellClicked(const QDate& date)
 {   
-    setSelectedDate(date);
-    setCurrentDate(date);
+    if (!date.isValid()) {
+        return;
+    }
+
+    if (auto oldCell = m_cells.value(m_selectedDate)) {
+        oldCell->setSelected(false);
+    }
+
+    m_selectedDate = date;
+    
+    if (auto newCell = m_cells.value(m_selectedDate)) {
+        newCell->setSelected(true);
+    }
+
     emit dayClicked(date);
 }
 
