@@ -62,15 +62,17 @@ void MainWindow::setupUI()
     connect(weekView, &WeekView::dayClicked,
             this, &MainWindow::handleDayClicked);
     
-    // Важно: сначала загрузить данные, потом обновить UI
-    StorageManager::instance().loadFromFile();
+    if (!StorageManager::instance().loadFromFile()) {
+        qWarning() << "Failed to load workout data!";
+    }
+    
     calendar->loadSavedData();
+    
     calendar->update();
     
     updateViewVisibility();
     
-    // Обновляем информацию о текущем дне
-    handleDayClicked(calendar->selectedDate());
+    handleDayClicked(QDate::currentDate());
 }
 
 void MainWindow::setupWeekView()
