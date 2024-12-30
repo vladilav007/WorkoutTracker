@@ -31,16 +31,26 @@ WeekView::WeekView(QWidget* parent)
 
 void WeekView::createHeaderLabels()
 {
-    QStringList dayNames = {"Monday", "Tuesday", "Wednesday", 
-                           "Thursday", "Friday", "Saturday", "Sunday"};
+    QStringList dayNames = {
+        tr("Monday"), tr("Tuesday"), tr("Wednesday"), 
+        tr("Thursday"), tr("Friday"), tr("Saturday"), tr("Sunday")
+    };
     
     for (int i = 0; i < dayNames.size(); ++i) {
         QLabel* label = new QLabel(dayNames[i], this);
         label->setAlignment(Qt::AlignCenter);
-        label->setStyleSheet("font-weight: bold; padding: 5px; color: white;");
-        m_gridLayout->addWidget(label, 0, i);
+        
+        // Weekend styling
+        if (i >= 5) {
+            label->setStyleSheet("font-weight: bold; padding: 5px; color: #F44336;");
+        } else {
+            label->setStyleSheet("font-weight: bold; padding: 5px; color: white;");
+        }
+        
+        m_gridLayout->addWidget(label, 1, i);
     }
 }
+
 
 void WeekView::createWeekCells()
 {
@@ -100,12 +110,45 @@ void WeekView::setCurrentDate(const QDate& date)
     if (m_currentDate != date) {
         m_currentDate = date;
         updateView();
+        updateWeekLabel();
     }
 }
 
 void WeekView::updateView()
 {
-    createWeekCells();
+    // Clear all existing cells first
+    for (auto cell : m_cells) {
+        if (cell) {
+            cell->setSelected(false);
+            delete cell;
+        }
+    }
+    m_cells.clear();
+    
+    // Create new cells for current week
+    QDate weekStart = getWeekStart(m_currentDate);
+    
+    for (int i = 0; i < 7; ++i) {
+        QDate cellDate = weekStart.addDays(i);
+        WeekViewCell* cell = new WeekViewCell(cellDate, this);
+        
+        connect(cell, &WeekViewCell::clicked,
+                this, &WeekView::handleCellClicked);
+        connect(cell, &WeekViewCell::contextMenuRequested,
+                this, &WeekView::handleCellContextMenu);
+        
+        m_gridLayout->addWidget(cell, 1, i);
+        m_cells[cellDate] = cell;
+    }
+    
+    loadWorkoutData();
+    
+    // Reset selection
+    if (m_selectedDate.isValid()) {
+        if (auto cell = m_cells.value(m_selectedDate)) {
+            cell->setSelected(true);
+        }
+    }
 }
 
 void WeekView::handleCellClicked(const QDate& date)
@@ -201,9 +244,16 @@ void WeekView::setupNavigation()
     auto navigationLayout = new QHBoxLayout;
     
     prevWeekButton = new QPushButton("<", this);
+    prevWeekButton->setFixedWidth(30);
+    prevWeekButton->setStyleSheet("QPushButton { background-color: #404040; color: white; border: none; padding: 5px; }");
+    
     nextWeekButton = new QPushButton(">", this);
+    nextWeekButton->setFixedWidth(30);
+    nextWeekButton->setStyleSheet("QPushButton { background-color: #404040; color: white; border: none; padding: 5px; }");
+    
     weekLabel = new QLabel(this);
     weekLabel->setAlignment(Qt::AlignCenter);
+    weekLabel->setStyleSheet("QLabel { color: white; font-weight: bold; }");
     
     navigationLayout->addWidget(prevWeekButton);
     navigationLayout->addWidget(weekLabel);
@@ -212,11 +262,7 @@ void WeekView::setupNavigation()
     connect(prevWeekButton, &QPushButton::clicked, this, &WeekView::prevWeek);
     connect(nextWeekButton, &QPushButton::clicked, this, &WeekView::nextWeek);
     
-    // Добавляем навигацию в основной layout перед сеткой
     m_gridLayout->addLayout(navigationLayout, 0, 0, 1, 7);
-    
-    // Сдвигаем заголовки дней недели
-    createHeaderLabels(); // Перемещаем заголовки на строку ниже
     
     updateWeekLabel();
 }
@@ -224,20 +270,32 @@ void WeekView::setupNavigation()
 void WeekView::prevWeek()
 {
     setCurrentDate(m_currentDate.addDays(-7));
+    updateWeekLabel();
 }
 
 void WeekView::nextWeek()
 {
     setCurrentDate(m_currentDate.addDays(7));
+    updateWeekLabel();
 }
 
 void WeekView::updateWeekLabel()
 {
     QDate weekStart = getWeekStart(m_currentDate);
     QDate weekEnd = weekStart.addDays(6);
-    weekLabel->setText(tr("Week: %1 - %2")
-                      .arg(weekStart.toString("dd.MM"))
-                      .arg(weekEnd.toString("dd.MM.yyyy")));
+    
+    QString weekText = QString("%1 - %2")
+        .arg(weekStart.toString("dd.MM"))
+        .arg(weekEnd.toString("dd.MM.yyyy"));
+        
+    if (weekStart.month() != weekEnd.month()) {
+        weekText = QString("%1.%2 - %3")
+            .arg(weekStart.toString("dd"))
+            .arg(weekStart.toString("MM"))
+            .arg(weekEnd.toString("dd.MM.yyyy"));
+    }
+    
+    weekLabel->setText(weekText);
 }
 
 void WeekView::copyWorkout(const QDate& date)

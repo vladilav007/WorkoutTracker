@@ -68,14 +68,40 @@ void WeekViewCell::paintEvent(QPaintEvent* event)
     
     // Draw date
     bool isWeekend = m_date.dayOfWeek() > 5;
-    QColor textColor = isWeekend ? QColor(244, 67, 54) : Qt::white;
+    bool isToday = m_date == QDate::currentDate();
     
-    painter.setPen(textColor);
+    // Determine text color based on status and weekend
+    QColor textColor;
+    if (isToday) {
+        textColor = Qt::green;
+    } else if (m_status == WorkoutStatus::Missed) {
+        textColor = Qt::white;
+    } else if (m_status == WorkoutStatus::Completed) {
+        textColor = Qt::black;
+    } else if (isWeekend) {
+        textColor = QColor(244, 67, 54);
+    } else {
+        textColor = Qt::white;
+    }
+    
+    // Configure font
     QFont dateFont = painter.font();
     dateFont.setBold(true);
     dateFont.setPointSize(14);
     painter.setFont(dateFont);
-    painter.drawText(QRect(10, 10, rect.width() - 20, 30), 
+    
+    // Draw date number
+    painter.setRenderHint(QPainter::TextAntialiasing, true);
+    if (m_status == WorkoutStatus::Missed || m_status == WorkoutStatus::RestDay) {
+        // For dark backgrounds, add a thin light outline
+        painter.setPen(QPen(Qt::white, 0.5));
+        painter.drawText(QRect(11, 11, rect.width() - 20, 30),
+                        Qt::AlignLeft | Qt::AlignVCenter,
+                        QString::number(m_date.day()));
+    }
+    
+    painter.setPen(textColor);
+    painter.drawText(QRect(10, 10, rect.width() - 20, 30),
                     Qt::AlignLeft | Qt::AlignVCenter,
                     QString::number(m_date.day()));
 
@@ -86,6 +112,7 @@ void WeekViewCell::paintEvent(QPaintEvent* event)
         nameFont.setBold(true);
         painter.setFont(nameFont);
         
+        painter.setPen(Qt::white);  // Always white text for workout info
         QRect nameRect = rect.adjusted(10, 40, -10, -rect.height()/2);
         painter.drawText(nameRect, Qt::AlignLeft | Qt::TextWordWrap, m_workoutName);
         
@@ -105,13 +132,13 @@ QColor WeekViewCell::getStatusColor() const
 {
     switch (m_status) {
         case WorkoutStatus::Completed:
-            return QColor(76, 175, 80);    // Green
+            return QColor(76, 175, 80);    // Material Design Green
         case WorkoutStatus::Missed:
-            return QColor(244, 67, 54);    // Red
+            return QColor(244, 67, 54);    // Material Design Red
         case WorkoutStatus::RestDay:
-            return QColor(158, 158, 158);  // Grey
+            return QColor(158, 158, 158);  // Material Design Grey
         default:
-            return QColor(45, 45, 45);     // Dark background
+            return QColor(45, 45, 45);     // Dark background for default state
     }
 }
 

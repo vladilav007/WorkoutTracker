@@ -42,17 +42,21 @@ void MainWindow::setupUI()
 {
     centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
-    
     mainLayout = new QVBoxLayout(centralWidget);
     
     statusLabel = new QLabel(this);
     statusLabel->setStyleSheet("QLabel { color: white; padding: 5px; }");
     mainLayout->addWidget(statusLabel);
     
+    // Load data first
+    StorageManager::instance().loadFromFile();
+    
     calendar = new CustomCalendarWidget(this);
+    calendar->loadSavedData();
     mainLayout->addWidget(calendar);
     
     setupWeekView();
+    weekView->loadWorkoutData();
     
     // Connect signals
     connect(calendar, &QCalendarWidget::clicked,
@@ -62,20 +66,11 @@ void MainWindow::setupUI()
     connect(weekView, &WeekView::dayClicked,
             this, &MainWindow::handleDayClicked);
     
-    StorageManager::instance().loadFromFile();
-    
-    // Force data load for both views
-    calendar->loadSavedData();
-    weekView->loadWorkoutData();
+    updateViewVisibility();
+    handleDayClicked(QDate::currentDate());
     
     calendar->update();
     weekView->update();
-    
-    updateViewVisibility();
-    
-    // Reset status label style and update current day info
-    statusLabel->setStyleSheet("QLabel { color: white; padding: 5px; }");
-    handleDayClicked(QDate::currentDate());
 }
 
 void MainWindow::setupWeekView()
@@ -148,14 +143,11 @@ void MainWindow::createNewWorkout()
 
 void MainWindow::editWorkout()
 {
-    QDate selectedDate = calendar->selectedDate();
-    if (calendar->hasWorkout(selectedDate)) {
-        qDebug() << "Opening workout for viewing/editing:" << selectedDate;
-        showWorkoutDialog(selectedDate, true);
-    } else {
-        QMessageBox::information(this, tr("No Workout"),
-            tr("No workout found for selected date. Use '+' button to create a new one."));
-    }
+    QDate selectedDate = isMonthViewActive ? 
+                        calendar->selectedDate() : 
+                        weekView->selectedDate();
+
+    showWorkoutDialog(selectedDate, false);
 }
 
 void MainWindow::loadWorkoutData()
@@ -341,8 +333,10 @@ void MainWindow::handleCalendarStatusChanged(const QDate& date, WorkoutStatus st
         StorageManager::instance().saveWorkout(date, "", "", QVector<Exercise>(), status);
     }
     
-    // Принудительно сохраняем изменения
     StorageManager::instance().saveToFile();
+    
+    calendar->loadSavedData();
+    weekView->loadWorkoutData();
     
     isUpdating = false;
 }

@@ -140,6 +140,25 @@ void WorkoutDialog::saveWorkout()
         return;
     }
     
+    WorkoutStatus currentStatus = WorkoutStatus::NoWorkout;
+    QString oldName, oldDescription;
+    QVector<Exercise> oldExercises;
+    
+    if (StorageManager::instance().loadWorkout(workoutDate, 
+            oldName, oldDescription, oldExercises, currentStatus)) {
+        StorageManager::instance().saveWorkout(workoutDate, 
+            nameEdit->text(), 
+            descriptionEdit->toPlainText(), 
+            getCurrentExercises(),
+            currentStatus);
+    } else {
+        StorageManager::instance().saveWorkout(workoutDate, 
+            nameEdit->text(), 
+            descriptionEdit->toPlainText(), 
+            getCurrentExercises(),
+            WorkoutStatus::NoWorkout);
+    }
+    
     accept();
 }
 

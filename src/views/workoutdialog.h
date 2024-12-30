@@ -9,6 +9,8 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include "../models/types.h"
+#include "../models/workout_status.h"
+#include "../models/storage_manager.h"
 
 class WorkoutDialog : public QDialog
 {

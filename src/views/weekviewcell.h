@@ -4,6 +4,7 @@
 
 #include <QWidget>
 #include <QDate>
+#include <QPainterPath>
 #include "../models/types.h"
 #include "../models/workout_status.h"
 
